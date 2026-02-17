@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, Heart, Sparkles, Zap, Trophy, Gift, Settings, Home, User, Volume2, VolumeX, Eye } from 'lucide-react';
 import {
   GameStats, Achievement, GameSettings,
