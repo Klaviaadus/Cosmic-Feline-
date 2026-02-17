@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .transform-gpu {
+    transform-style: preserve-3d;
+  }
+}
+
+/* Custom 3D CSS Properties */
+body {
+  overflow-x: hidden;
+}
+
+/* Enhanced glow effects */
+.drop-shadow-glow-cyan {
+  filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8));
+}
+
+.drop-shadow-glow-pink {
+  filter: drop-shadow(0 0 15px rgba(236, 72, 153, 0.8));
+}
+
+.drop-shadow-glow-yellow {
+  filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.8));
+}
+
+.drop-shadow-glow-blue {
+  filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8));
+}
+
+.drop-shadow-glow-purple {
+  filter: drop-shadow(0 0 15px rgba(147, 51, 234, 0.8));
+}
