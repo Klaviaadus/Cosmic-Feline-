@@ -7,8 +7,9 @@ import {
 } from './game';
 import { loadStats, saveStats, loadSettings, saveSettings, loadAchievements, saveAchievements } from './storage';
 import { playFeedSound, playPlaySound, playPetSound, playLevelUpSound, playBuySound, playAchievementSound } from './sound';
+import { ChatBox } from './ChatBox';
 
-type Screen = 'home' | 'shop' | 'achievements' | 'profile' | 'settings';
+type Screen = 'home' | 'shop' | 'achievements' | 'profile' | 'settings' | 'chat';
 
 function App() {
   const [gameStats, setGameStats] = useState<GameStats>(loadStats);
@@ -19,12 +20,10 @@ function App() {
   const [showReward, setShowReward] = useState(false);
   const [rewardText, setRewardText] = useState('');
 
-  // Persist state on change
   useEffect(() => { saveStats(gameStats); }, [gameStats]);
   useEffect(() => { saveSettings(settings); }, [settings]);
   useEffect(() => { saveAchievements(achievements); }, [achievements]);
 
-  // Check achievements whenever stats change
   useEffect(() => {
     const updated = checkAchievements(gameStats, achievements);
     const newUnlock = updated.find((a, i) => a.unlocked && !achievements[i].unlocked);
@@ -42,7 +41,6 @@ function App() {
     setTimeout(() => setShowReward(false), 2000);
   };
 
-  // Level up logic
   useEffect(() => {
     const newLevel = computeLevel(gameStats.experience);
     if (newLevel > gameStats.level) {
@@ -100,27 +98,54 @@ function App() {
     }
   };
 
-  // ── Render helpers ───────────────────────────────────
-
   const renderCat = () => (
     <div
       role="button"
       tabIndex={0}
       aria-label={`Pet ${settings.catName}`}
-      className={`relative w-32 h-32 mx-auto ${getAnimationClass()} cursor-pointer`}
+      className={`relative w-32 h-36 mx-auto ${getAnimationClass()} cursor-pointer`}
       onClick={handlePet}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePet(); } }}
     >
       <div className="relative transform-gpu">
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-400 via-blue-500 to-purple-600 rounded-full mx-auto mb-2 relative shadow-2xl border-2 border-purple-300/50">
-          <div className="absolute -top-3 left-3 w-0 h-0 border-l-4 border-r-4 border-b-6 border-l-transparent border-r-transparent border-b-purple-400" />
-          <div className="absolute -top-3 right-3 w-0 h-0 border-l-4 border-r-4 border-b-6 border-l-transparent border-r-transparent border-b-purple-400" />
-          <div className={`absolute top-6 left-4 w-2 h-2 bg-cyan-300 rounded-full ${settings.reducedMotion ? '' : 'animate-blink'}`} />
-          <div className={`absolute top-6 right-4 w-2 h-2 bg-cyan-300 rounded-full ${settings.reducedMotion ? '' : 'animate-blink'}`} />
-          <div className="absolute top-9 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-pink-400 rounded-full" />
+        {/* Head — blocky 8-bit */}
+        <div
+          className="w-20 h-20 bg-black mx-auto mb-1 relative border-4 border-[#FF00FF]"
+          style={{ boxShadow: '0 0 12px #FF00FF, inset 0 0 12px rgba(255,0,255,0.08)' }}
+        >
+          {/* Ears */}
+          <div className="absolute -top-4 left-0 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-[#FF00FF]" />
+          <div className="absolute -top-4 right-0 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-[#FF00FF]" />
+          {/* Eyes */}
+          <div
+            className={`absolute top-5 left-3 w-3 h-3 bg-[#00FFFF] ${settings.reducedMotion ? '' : 'animate-blink'}`}
+            style={{ boxShadow: '0 0 8px #00FFFF' }}
+          />
+          <div
+            className={`absolute top-5 right-3 w-3 h-3 bg-[#00FFFF] ${settings.reducedMotion ? '' : 'animate-blink'}`}
+            style={{ boxShadow: '0 0 8px #00FFFF' }}
+          />
+          {/* Nose */}
+          <div
+            className="absolute top-10 left-1/2 transform -translate-x-1/2 w-2 h-1 bg-[#FF6600]"
+            style={{ boxShadow: '0 0 5px #FF6600' }}
+          />
+          {/* Mouth */}
+          <div className="absolute top-12 left-[28px] flex space-x-2">
+            <div className="w-1 h-1 bg-[#FF00FF]" />
+            <div className="w-1 h-1 bg-[#FF00FF]" />
+          </div>
         </div>
-        <div className="w-16 h-12 bg-gradient-to-b from-purple-500 via-blue-600 to-purple-700 rounded-full mx-auto shadow-xl" />
-        <div className={`absolute -right-6 bottom-2 w-8 h-3 bg-gradient-to-r from-blue-500 to-purple-400 rounded-full transform rotate-12 ${settings.reducedMotion ? '' : 'animate-tail-wag'}`} />
+        {/* Body */}
+        <div
+          className="w-14 h-10 bg-black border-2 border-[#FF00FF] mx-auto"
+          style={{ boxShadow: '0 0 8px #FF00FF' }}
+        />
+        {/* Tail */}
+        <div
+          className={`absolute -right-5 bottom-2 w-7 h-2 bg-[#FF00FF] transform rotate-12 ${settings.reducedMotion ? '' : 'animate-tail-wag'}`}
+          style={{ boxShadow: '0 0 8px #FF00FF' }}
+        />
       </div>
     </div>
   );
@@ -130,103 +155,125 @@ function App() {
       <div className="relative">
         {renderCat()}
         {showReward && (
-          <div role="status" aria-live="polite" className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black px-3 py-1 rounded-full text-sm font-bold animate-bounce">
+          <div
+            role="status"
+            aria-live="polite"
+            className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black border-2 border-[#FFFF00] text-[#FFFF00] px-3 py-1 text-[7px] font-bold animate-bounce whitespace-nowrap"
+            style={{ textShadow: '0 0 8px #FFFF00', boxShadow: '0 0 10px #FFFF00' }}
+          >
             {rewardText}
           </div>
         )}
       </div>
 
       <div className="w-full max-w-sm space-y-3">
-        <div className="flex items-center justify-between bg-purple-800/30 rounded-lg p-3">
-          <span className="text-purple-200">Level {gameStats.level}</span>
-          <span className="text-yellow-400 font-bold">{gameStats.coins} Stardust</span>
+        <div
+          className="flex items-center justify-between border border-[#00FF00] p-3"
+          style={{ boxShadow: '0 0 6px rgba(0,255,0,0.3)' }}
+        >
+          <span className="text-[#00FF00] text-[8px]">LVL {gameStats.level}</span>
+          <span className="text-[#FFFF00] text-[8px]" style={{ textShadow: '0 0 6px #FFFF00' }}>
+            {gameStats.coins} SD
+          </span>
         </div>
 
-        {/* Happiness */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-pink-300 text-sm">Happiness</span>
-            <span className="text-pink-300 text-sm">{gameStats.happiness}%</span>
+            <span className="text-[#FF00FF] text-[7px]">HAPPY</span>
+            <span className="text-[#FF00FF] text-[7px]">{gameStats.happiness}%</span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2" role="progressbar" aria-valuenow={gameStats.happiness} aria-valuemin={0} aria-valuemax={100} aria-label="Happiness">
-            <div className="bg-gradient-to-r from-pink-400 to-purple-400 h-2 rounded-full transition-all duration-500" style={{ width: `${gameStats.happiness}%` }} />
-          </div>
-        </div>
-
-        {/* Energy */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-blue-300 text-sm">Energy</span>
-            <span className="text-blue-300 text-sm">{gameStats.energy}%</span>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2" role="progressbar" aria-valuenow={gameStats.energy} aria-valuemin={0} aria-valuemax={100} aria-label="Energy">
-            <div className="bg-gradient-to-r from-blue-400 to-cyan-400 h-2 rounded-full transition-all duration-500" style={{ width: `${gameStats.energy}%` }} />
+          <div className="w-full bg-black h-3 border border-[#FF00FF]" role="progressbar" aria-valuenow={gameStats.happiness} aria-valuemin={0} aria-valuemax={100} aria-label="Happiness">
+            <div className="bg-[#FF00FF] h-full transition-all duration-500" style={{ width: `${gameStats.happiness}%`, boxShadow: '0 0 6px #FF00FF' }} />
           </div>
         </div>
 
-        {/* Experience */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-yellow-300 text-sm">Experience</span>
-            <span className="text-yellow-300 text-sm">{gameStats.experience % 100}/100</span>
+            <span className="text-[#00FFFF] text-[7px]">ENERGY</span>
+            <span className="text-[#00FFFF] text-[7px]">{gameStats.energy}%</span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2" role="progressbar" aria-valuenow={gameStats.experience % 100} aria-valuemin={0} aria-valuemax={100} aria-label="Experience">
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-400 h-2 rounded-full transition-all duration-500" style={{ width: `${gameStats.experience % 100}%` }} />
+          <div className="w-full bg-black h-3 border border-[#00FFFF]" role="progressbar" aria-valuenow={gameStats.energy} aria-valuemin={0} aria-valuemax={100} aria-label="Energy">
+            <div className="bg-[#00FFFF] h-full transition-all duration-500" style={{ width: `${gameStats.energy}%`, boxShadow: '0 0 6px #00FFFF' }} />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[#FFFF00] text-[7px]">XP</span>
+            <span className="text-[#FFFF00] text-[7px]">{gameStats.experience % 100}/100</span>
+          </div>
+          <div className="w-full bg-black h-3 border border-[#FFFF00]" role="progressbar" aria-valuenow={gameStats.experience % 100} aria-valuemin={0} aria-valuemax={100} aria-label="Experience">
+            <div className="bg-[#FFFF00] h-full transition-all duration-500" style={{ width: `${gameStats.experience % 100}%`, boxShadow: '0 0 6px #FFFF00' }} />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+      <div className="w-full max-w-sm space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={handleFeed}
+            disabled={gameStats.coins < 10}
+            aria-label="Feed cat for 10 stardust"
+            className="border-2 border-[#00FF00] disabled:border-gray-800 bg-black text-[#00FF00] disabled:text-gray-800 py-3 px-4 text-[7px] active:translate-y-1 transition-transform"
+            style={{ boxShadow: gameStats.coins >= 10 ? '0 0 8px rgba(0,255,0,0.5)' : 'none' }}
+          >
+            <Heart className="w-4 h-4 mx-auto mb-1" aria-hidden="true" />
+            FEED (10)
+          </button>
+          <button
+            onClick={handlePlay}
+            disabled={gameStats.energy < 20}
+            aria-label="Play with cat, costs 20 energy"
+            className="border-2 border-[#FF00FF] disabled:border-gray-800 bg-black text-[#FF00FF] disabled:text-gray-800 py-3 px-4 text-[7px] active:translate-y-1 transition-transform"
+            style={{ boxShadow: gameStats.energy >= 20 ? '0 0 8px rgba(255,0,255,0.5)' : 'none' }}
+          >
+            <Sparkles className="w-4 h-4 mx-auto mb-1" aria-hidden="true" />
+            PLAY
+          </button>
+        </div>
         <button
-          onClick={handleFeed}
-          disabled={gameStats.coins < 10}
-          aria-label="Feed cat for 10 stardust"
-          className="bg-gradient-to-r from-green-500 to-emerald-500 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 px-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all duration-200"
+          onClick={() => setCurrentScreen('chat' as Screen)}
+          aria-label="Chat with your cosmic cat"
+          className="w-full border-2 border-[#00FFFF] bg-black text-[#00FFFF] py-3 px-4 text-[7px] active:translate-y-1 transition-transform"
+          style={{ boxShadow: '0 0 8px rgba(0,255,255,0.5)' }}
         >
-          <Heart className="w-5 h-5 mx-auto mb-1" aria-hidden="true" />
-          Feed (10)
-        </button>
-        <button
-          onClick={handlePlay}
-          disabled={gameStats.energy < 20}
-          aria-label="Play with cat, costs 20 energy"
-          className="bg-gradient-to-r from-purple-500 to-pink-500 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 px-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all duration-200"
-        >
-          <Sparkles className="w-5 h-5 mx-auto mb-1" aria-hidden="true" />
-          Play
+          <svg className="w-4 h-4 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          CHAT
         </button>
       </div>
     </div>
   );
 
   const shopItems = [
-    { label: 'Star Treats', desc: '+30 Happiness', cost: 25, effect: { happiness: 30 }, icon: <Star className="w-6 h-6 text-white" aria-hidden="true" />, gradient: 'from-yellow-400 to-orange-400' },
-    { label: 'Energy Boost', desc: '+50 Energy', cost: 40, effect: { energy: 50 }, icon: <Zap className="w-6 h-6 text-white" aria-hidden="true" />, gradient: 'from-blue-400 to-cyan-400' },
-    { label: 'Mystery Box', desc: 'Random reward', cost: 100, effect: { happiness: Math.floor(Math.random() * 30) + 10, energy: Math.floor(Math.random() * 30) + 10, experience: Math.floor(Math.random() * 30) + 10 }, icon: <Gift className="w-6 h-6 text-white" aria-hidden="true" />, gradient: 'from-pink-400 to-purple-400' },
+    { label: 'STAR TREATS', desc: '+30 HAPPY', cost: 25, effect: { happiness: 30 }, icon: <Star className="w-5 h-5 text-[#FFFF00]" aria-hidden="true" />, color: '#FFFF00' },
+    { label: 'ENERGY BOOST', desc: '+50 ENERGY', cost: 40, effect: { energy: 50 }, icon: <Zap className="w-5 h-5 text-[#00FFFF]" aria-hidden="true" />, color: '#00FFFF' },
+    { label: 'MYSTERY BOX', desc: 'RANDOM REWARD', cost: 100, effect: { happiness: Math.floor(Math.random() * 30) + 10, energy: Math.floor(Math.random() * 30) + 10, experience: Math.floor(Math.random() * 30) + 10 }, icon: <Gift className="w-5 h-5 text-[#FF00FF]" aria-hidden="true" />, color: '#FF00FF' },
   ];
 
   const renderShopScreen = () => (
     <div className="flex-1 p-6">
-      <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-        Cosmic Shop
+      <h2 className="text-[10px] font-bold text-center mb-6 text-[#00FFFF]" style={{ textShadow: '0 0 10px #00FFFF' }}>
+        // SHOP //
       </h2>
       <div className="space-y-4">
         {shopItems.map(item => (
-          <div key={item.label} className="bg-purple-800/30 rounded-xl p-4 flex items-center justify-between">
+          <div key={item.label} className="border border-[#00FFFF] p-4 flex items-center justify-between bg-black" style={{ boxShadow: '0 0 5px rgba(0,255,255,0.2)' }}>
             <div className="flex items-center space-x-3">
-              <div className={`w-12 h-12 bg-gradient-to-r ${item.gradient} rounded-full flex items-center justify-center`}>
+              <div className="w-10 h-10 border-2 bg-black flex items-center justify-center" style={{ borderColor: item.color, boxShadow: `0 0 8px ${item.color}` }}>
                 {item.icon}
               </div>
               <div>
-                <h3 className="font-bold text-white">{item.label}</h3>
-                <p className="text-gray-300 text-sm">{item.desc}</p>
+                <h3 className="text-[8px] font-bold text-white">{item.label}</h3>
+                <p className="text-[7px] text-[#00FFFF] mt-1">{item.desc}</p>
               </div>
             </div>
             <button
               onClick={() => handleBuy(item.cost, item.effect, `Bought ${item.label}!`)}
               disabled={gameStats.coins < item.cost}
               aria-label={`Buy ${item.label} for ${item.cost} stardust`}
-              className="bg-yellow-500 disabled:bg-gray-600 text-black disabled:text-gray-400 px-4 py-2 rounded-lg font-bold"
+              className="border-2 border-[#FFFF00] disabled:border-gray-800 bg-black text-[#FFFF00] disabled:text-gray-800 px-3 py-2 text-[8px]"
             >
               {item.cost}
             </button>
@@ -237,42 +284,37 @@ function App() {
   );
 
   const achievementIcons: Record<string, React.ReactNode> = {
-    '1': <Star className="w-6 h-6" aria-hidden="true" />,
-    '2': <Heart className="w-6 h-6" aria-hidden="true" />,
-    '3': <Sparkles className="w-6 h-6" aria-hidden="true" />,
-    '4': <Trophy className="w-6 h-6" aria-hidden="true" />,
+    '1': <Star className="w-5 h-5" aria-hidden="true" />,
+    '2': <Heart className="w-5 h-5" aria-hidden="true" />,
+    '3': <Sparkles className="w-5 h-5" aria-hidden="true" />,
+    '4': <Trophy className="w-5 h-5" aria-hidden="true" />,
   };
 
   const renderAchievementsScreen = () => (
     <div className="flex-1 p-6">
-      <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-        Achievements
+      <h2 className="text-[10px] font-bold text-center mb-6 text-[#FFFF00]" style={{ textShadow: '0 0 10px #FFFF00' }}>
+        // WINS //
       </h2>
       <div className="space-y-3" role="list" aria-label="Achievements list">
         {achievements.map((achievement) => (
           <div
             key={achievement.id}
             role="listitem"
-            className={`rounded-xl p-4 flex items-center space-x-3 ${
-              achievement.unlocked
-                ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/30'
-                : 'bg-gray-800/30 border border-gray-600/30'
-            }`}
+            className={`p-4 flex items-center space-x-3 border ${achievement.unlocked ? 'border-[#FFFF00]' : 'border-gray-800'}`}
+            style={achievement.unlocked ? { boxShadow: '0 0 8px rgba(255,255,0,0.3)' } : {}}
           >
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              achievement.unlocked
-                ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
-                : 'bg-gray-600 text-gray-400'
-            }`}>
+            <div className={`w-10 h-10 flex items-center justify-center border-2 ${achievement.unlocked ? 'border-[#FFFF00] text-[#FFFF00]' : 'border-gray-800 text-gray-700'}`}>
               {achievementIcons[achievement.id]}
             </div>
             <div className="flex-1">
-              <h3 className={`font-bold ${achievement.unlocked ? 'text-yellow-400' : 'text-gray-400'}`}>
+              <h3 className={`text-[8px] font-bold ${achievement.unlocked ? 'text-[#FFFF00]' : 'text-gray-700'}`}>
                 {achievement.title}
               </h3>
-              <p className="text-gray-300 text-sm">{achievement.description}</p>
+              <p className="text-[7px] text-gray-600 mt-1">{achievement.description}</p>
             </div>
-            {achievement.unlocked && <Trophy className="w-6 h-6 text-yellow-400" aria-label="Unlocked" />}
+            {achievement.unlocked && (
+              <Trophy className="w-5 h-5 text-[#FFFF00]" aria-label="Unlocked" style={{ filter: 'drop-shadow(0 0 5px #FFFF00)' }} />
+            )}
           </div>
         ))}
       </div>
@@ -281,34 +323,36 @@ function App() {
 
   const renderProfileScreen = () => (
     <div className="flex-1 p-6">
-      <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-        Profile
+      <h2 className="text-[10px] font-bold text-center mb-6 text-[#FF00FF]" style={{ textShadow: '0 0 10px #FF00FF' }}>
+        // PLAYER //
       </h2>
       <div className="text-center space-y-6">
-        <div className="w-24 h-24 mx-auto bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-          <User className="w-12 h-12 text-white" aria-hidden="true" />
+        <div className="w-24 h-24 mx-auto border-4 border-[#FF00FF] bg-black flex items-center justify-center" style={{ boxShadow: '0 0 20px rgba(255,0,255,0.5)' }}>
+          <User className="w-12 h-12 text-[#FF00FF]" aria-hidden="true" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-white">Cosmic Guardian</h3>
-          <p className="text-purple-300">Level {gameStats.level} Cat Caretaker</p>
+          <h3 className="text-[8px] font-bold text-white">COSMIC GUARDIAN</h3>
+          <p className="text-[7px] text-[#FF00FF] mt-2" style={{ textShadow: '0 0 6px #FF00FF' }}>
+            LVL {gameStats.level} CAT KEEPER
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
-          <div className="bg-purple-800/30 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-yellow-400">{gameStats.coins}</div>
-            <div className="text-sm text-gray-300">Total Coins</div>
+          <div className="border border-[#FFFF00] p-3 text-center bg-black">
+            <div className="text-xl font-bold text-[#FFFF00]" style={{ textShadow: '0 0 8px #FFFF00' }}>{gameStats.coins}</div>
+            <div className="text-[7px] text-gray-500 mt-1">COINS</div>
           </div>
-          <div className="bg-purple-800/30 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-purple-400">{gameStats.experience}</div>
-            <div className="text-sm text-gray-300">Experience</div>
+          <div className="border border-[#00FFFF] p-3 text-center bg-black">
+            <div className="text-xl font-bold text-[#00FFFF]" style={{ textShadow: '0 0 8px #00FFFF' }}>{gameStats.experience}</div>
+            <div className="text-[7px] text-gray-500 mt-1">XP</div>
           </div>
         </div>
         <button
           onClick={() => setCurrentScreen('settings')}
           aria-label="Open settings"
-          className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-3 rounded-xl font-bold flex items-center justify-center space-x-2"
+          className="w-full border-2 border-gray-700 bg-black text-gray-500 py-3 text-[8px] flex items-center justify-center space-x-2 hover:border-[#FF00FF] hover:text-[#FF00FF] transition-colors"
         >
-          <Settings className="w-5 h-5" aria-hidden="true" />
-          <span>Settings</span>
+          <Settings className="w-4 h-4" aria-hidden="true" />
+          <span>SETTINGS</span>
         </button>
       </div>
     </div>
@@ -316,65 +360,77 @@ function App() {
 
   const renderSettingsScreen = () => (
     <div className="flex-1 p-6">
-      <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-        Settings
+      <h2 className="text-[10px] font-bold text-center mb-6 text-[#00FF00]" style={{ textShadow: '0 0 10px #00FF00' }}>
+        // CONFIG //
       </h2>
       <div className="space-y-5 max-w-sm mx-auto">
-        {/* Cat name */}
         <div className="space-y-2">
-          <label htmlFor="cat-name" className="text-purple-200 text-sm font-medium">Cat Name</label>
+          <label htmlFor="cat-name" className="text-[#00FFFF] text-[7px] font-medium">CAT NAME:</label>
           <input
             id="cat-name"
             type="text"
             maxLength={20}
             value={settings.catName}
             onChange={e => setSettings(prev => ({ ...prev, catName: e.target.value }))}
-            className="w-full bg-purple-800/30 border border-purple-500/30 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400"
+            className="w-full bg-black border-2 border-[#00FFFF] px-4 py-2 text-[#00FFFF] text-[8px] focus:outline-none focus:border-[#FF00FF] focus:text-[#FF00FF]"
           />
         </div>
 
-        {/* Sound toggle */}
-        <div className="flex items-center justify-between bg-purple-800/30 rounded-lg p-4">
+        <div className="flex items-center justify-between border border-[#9900FF] p-4" style={{ boxShadow: '0 0 5px rgba(153,0,255,0.2)' }}>
           <div className="flex items-center space-x-3">
-            {settings.soundEnabled ? <Volume2 className="w-5 h-5 text-purple-300" aria-hidden="true" /> : <VolumeX className="w-5 h-5 text-gray-400" aria-hidden="true" />}
-            <span className="text-white font-medium">Sound Effects</span>
+            {settings.soundEnabled
+              ? <Volume2 className="w-4 h-4 text-[#9900FF]" aria-hidden="true" />
+              : <VolumeX className="w-4 h-4 text-gray-700" aria-hidden="true" />}
+            <span className="text-[8px] text-white">SOUND FX</span>
           </div>
           <button
             role="switch"
             aria-checked={settings.soundEnabled}
             aria-label="Toggle sound effects"
             onClick={() => setSettings(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-            className={`w-12 h-6 rounded-full transition-colors duration-200 relative ${settings.soundEnabled ? 'bg-purple-500' : 'bg-gray-600'}`}
+            className={`w-12 h-6 relative border-2 transition-colors duration-200 ${settings.soundEnabled ? 'border-[#9900FF] bg-[#9900FF]/20' : 'border-gray-700 bg-black'}`}
           >
-            <span className={`block w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform duration-200 ${settings.soundEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            <span className={`block w-5 h-4 bg-white absolute top-0.5 transition-transform duration-200 ${settings.soundEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
           </button>
         </div>
 
-        {/* Reduced motion toggle */}
-        <div className="flex items-center justify-between bg-purple-800/30 rounded-lg p-4">
+        <div className="flex items-center justify-between border border-[#9900FF] p-4">
           <div className="flex items-center space-x-3">
-            <Eye className="w-5 h-5 text-purple-300" aria-hidden="true" />
-            <span className="text-white font-medium">Reduce Motion</span>
+            <Eye className="w-4 h-4 text-[#9900FF]" aria-hidden="true" />
+            <span className="text-[8px] text-white">REDUCE MOTION</span>
           </div>
           <button
             role="switch"
             aria-checked={settings.reducedMotion}
             aria-label="Toggle reduced motion"
             onClick={() => setSettings(prev => ({ ...prev, reducedMotion: !prev.reducedMotion }))}
-            className={`w-12 h-6 rounded-full transition-colors duration-200 relative ${settings.reducedMotion ? 'bg-purple-500' : 'bg-gray-600'}`}
+            className={`w-12 h-6 relative border-2 transition-colors duration-200 ${settings.reducedMotion ? 'border-[#9900FF] bg-[#9900FF]/20' : 'border-gray-700 bg-black'}`}
           >
-            <span className={`block w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform duration-200 ${settings.reducedMotion ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            <span className={`block w-5 h-4 bg-white absolute top-0.5 transition-transform duration-200 ${settings.reducedMotion ? 'translate-x-6' : 'translate-x-0.5'}`} />
           </button>
         </div>
 
-        {/* Back to profile */}
         <button
           onClick={() => setCurrentScreen('profile')}
           aria-label="Back to profile"
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-bold mt-4"
+          className="w-full border-2 border-[#00FF00] bg-black text-[#00FF00] py-3 text-[8px] mt-4"
+          style={{ boxShadow: '0 0 8px rgba(0,255,0,0.3)' }}
         >
-          Back to Profile
+          BACK
         </button>
+      </div>
+    </div>
+  );
+
+  const renderChatScreen = () => (
+    <div className="flex-1 flex flex-col h-full">
+      <div className="p-4 border-b border-[#00FFFF]">
+        <h2 className="text-[10px] font-bold text-center text-[#00FFFF]" style={{ textShadow: '0 0 10px #00FFFF' }}>
+          // CHAT WITH {settings.catName.toUpperCase()} //
+        </h2>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <ChatBox catName={settings.catName} inline={true} />
       </div>
     </div>
   );
@@ -386,31 +442,32 @@ function App() {
       case 'achievements': return renderAchievementsScreen();
       case 'profile': return renderProfileScreen();
       case 'settings': return renderSettingsScreen();
+      case 'chat': return renderChatScreen();
       default: return renderHomeScreen();
     }
   };
 
   const navItems: { screen: Screen; icon: React.ReactNode; label: string }[] = [
-    { screen: 'home', icon: <Home className="w-6 h-6" aria-hidden="true" />, label: 'Home' },
-    { screen: 'shop', icon: <Gift className="w-6 h-6" aria-hidden="true" />, label: 'Shop' },
-    { screen: 'achievements', icon: <Trophy className="w-6 h-6" aria-hidden="true" />, label: 'Achievements' },
-    { screen: 'profile', icon: <User className="w-6 h-6" aria-hidden="true" />, label: 'Profile' },
+    { screen: 'home', icon: <Home className="w-5 h-5" aria-hidden="true" />, label: 'Home' },
+    { screen: 'shop', icon: <Gift className="w-5 h-5" aria-hidden="true" />, label: 'Shop' },
+    { screen: 'achievements', icon: <Trophy className="w-5 h-5" aria-hidden="true" />, label: 'Achievements' },
+    { screen: 'profile', icon: <User className="w-5 h-5" aria-hidden="true" />, label: 'Profile' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Starfield */}
+    <div className="min-h-screen retro-bg relative overflow-hidden">
+      {/* Neon pixel starfield */}
       {!settings.reducedMotion && (
         <div className="absolute inset-0" aria-hidden="true">
-          {Array.from({ length: 100 }).map((_, i) => (
+          {Array.from({ length: 60 }).map((_, i) => (
             <div
               key={i}
-              className="absolute bg-white rounded-full animate-twinkle-3d"
+              className={`absolute animate-twinkle-3d ${i % 3 === 0 ? 'bg-[#FF00FF]' : i % 3 === 1 ? 'bg-[#00FFFF]' : 'bg-[#00FF00]'}`}
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                width: `${Math.random() * 3 + 1}px`,
-                height: `${Math.random() * 3 + 1}px`,
+                width: '2px',
+                height: '2px',
                 animationDelay: `${Math.random() * 5}s`,
                 animationDuration: `${2 + Math.random() * 4}s`,
               }}
@@ -419,10 +476,17 @@ function App() {
         </div>
       )}
 
-      <div className="relative z-10 max-w-sm mx-auto min-h-screen bg-black/20 backdrop-blur-sm border-x border-purple-500/20 flex flex-col">
+      {/* Main container */}
+      <div
+        className="relative z-10 max-w-sm mx-auto min-h-screen bg-black border-x-2 border-[#FF00FF] flex flex-col font-pixel"
+        style={{ boxShadow: '0 0 30px rgba(255,0,255,0.25)' }}
+      >
         {/* Header */}
-        <header className="bg-gradient-to-r from-purple-800/50 to-blue-800/50 backdrop-blur-md p-4 border-b border-purple-500/20">
-          <h1 className="text-xl font-bold text-center bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <header className="bg-black p-4 border-b-2 border-[#FF00FF]" style={{ boxShadow: '0 2px 15px rgba(255,0,255,0.3)' }}>
+          <h1
+            className="text-[11px] font-bold text-center text-[#FF00FF]"
+            style={{ textShadow: '0 0 10px #FF00FF, 0 0 20px #FF00FF' }}
+          >
             {settings.catName}
           </h1>
         </header>
@@ -433,7 +497,11 @@ function App() {
         </main>
 
         {/* Bottom Navigation */}
-        <nav aria-label="Main navigation" className="bg-gradient-to-r from-purple-800/50 to-blue-800/50 backdrop-blur-md border-t border-purple-500/20 p-2">
+        <nav
+          aria-label="Main navigation"
+          className="bg-black border-t-2 border-[#FF00FF] p-2"
+          style={{ boxShadow: '0 -2px 15px rgba(255,0,255,0.3)' }}
+        >
           <div className="flex justify-around">
             {navItems.map(({ screen, icon, label }) => (
               <button
@@ -441,11 +509,8 @@ function App() {
                 onClick={() => setCurrentScreen(screen)}
                 aria-label={label}
                 aria-current={currentScreen === screen ? 'page' : undefined}
-                className={`p-3 rounded-xl transition-all duration-200 ${
-                  currentScreen === screen
-                    ? 'bg-purple-500/30 text-purple-300'
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                className={`p-3 transition-all duration-200 ${currentScreen === screen ? 'text-[#FF00FF]' : 'text-gray-700 hover:text-gray-500'}`}
+                style={currentScreen === screen ? { filter: 'drop-shadow(0 0 6px #FF00FF)' } : {}}
               >
                 {icon}
               </button>

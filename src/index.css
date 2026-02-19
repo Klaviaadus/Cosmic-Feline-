@@ -6,34 +6,62 @@
   .perspective-1000 {
     perspective: 1000px;
   }
-  
+
   .transform-gpu {
     transform-style: preserve-3d;
   }
 }
 
-/* Custom 3D CSS Properties */
+/* ── Retro 80s Base ── */
 body {
   overflow-x: hidden;
+  font-family: 'Press Start 2P', monospace;
+  background-color: #000;
 }
 
-/* Enhanced glow effects */
-.drop-shadow-glow-cyan {
-  filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8));
+/* CRT Scanlines overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
 }
 
-.drop-shadow-glow-pink {
-  filter: drop-shadow(0 0 15px rgba(236, 72, 153, 0.8));
+/* Retro grid background */
+.retro-bg {
+  background-color: #000;
+  background-image:
+    linear-gradient(rgba(255, 0, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 0, 255, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-.drop-shadow-glow-yellow {
-  filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.8));
-}
+/* Neon text glows */
+.text-glow-pink  { text-shadow: 0 0 8px #FF00FF, 0 0 20px #FF00FF; }
+.text-glow-cyan  { text-shadow: 0 0 8px #00FFFF, 0 0 20px #00FFFF; }
+.text-glow-green { text-shadow: 0 0 8px #00FF00, 0 0 20px #00FF00; }
+.text-glow-yellow{ text-shadow: 0 0 8px #FFFF00, 0 0 20px #FFFF00; }
 
-.drop-shadow-glow-blue {
-  filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8));
-}
+/* Neon box glows */
+.glow-pink  { box-shadow: 0 0 8px #FF00FF, 0 0 20px rgba(255,0,255,0.4); }
+.glow-cyan  { box-shadow: 0 0 8px #00FFFF, 0 0 20px rgba(0,255,255,0.4); }
+.glow-green { box-shadow: 0 0 8px #00FF00, 0 0 20px rgba(0,255,0,0.4); }
+.glow-yellow{ box-shadow: 0 0 8px #FFFF00, 0 0 20px rgba(255,255,0,0.4); }
 
-.drop-shadow-glow-purple {
-  filter: drop-shadow(0 0 15px rgba(147, 51, 234, 0.8));
-}
+/* Legacy glow classes */
+.drop-shadow-glow-cyan   { filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8)); }
+.drop-shadow-glow-pink   { filter: drop-shadow(0 0 15px rgba(236, 72, 153, 0.8)); }
+.drop-shadow-glow-yellow { filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.8)); }
+.drop-shadow-glow-blue   { filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8)); }
+.drop-shadow-glow-purple { filter: drop-shadow(0 0 15px rgba(147, 51, 234, 0.8)); }

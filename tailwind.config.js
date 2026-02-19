@@ -3,6 +3,25 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        pixel: ['"Press Start 2P"', 'monospace'],
+      },
+      colors: {
+        neon: {
+          pink:   '#FF00FF',
+          cyan:   '#00FFFF',
+          green:  '#00FF00',
+          yellow: '#FFFF00',
+          orange: '#FF6600',
+          purple: '#9900FF',
+        },
+      },
+      boxShadow: {
+        'neon-pink':   '0 0 6px #FF00FF, 0 0 20px rgba(255,0,255,0.4)',
+        'neon-cyan':   '0 0 6px #00FFFF, 0 0 20px rgba(0,255,255,0.4)',
+        'neon-green':  '0 0 6px #00FF00, 0 0 20px rgba(0,255,0,0.4)',
+        'neon-yellow': '0 0 6px #FFFF00, 0 0 20px rgba(255,255,0,0.4)',
+      },
       perspective: {
         '1000': '1000px',
       },
