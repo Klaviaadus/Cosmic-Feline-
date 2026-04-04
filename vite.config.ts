@@ -25,7 +25,7 @@ Keep responses concise (2-3 sentences usually) unless the user needs more detail
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/Cosmic-Feline-/',
+  base: '/',
   plugins: [
     react(),
     {
