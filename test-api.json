@@ -1,0 +1,15 @@
+{
+  "message": "What did I just ask you?",
+  "history": [
+    {
+      "role": "user",
+      "content": "Can you remember things?",
+      "timestamp": 1234567890
+    },
+    {
+      "role": "assistant",
+      "content": "Yes I can!",
+      "timestamp": 1234567891
+    }
+  ]
+}
