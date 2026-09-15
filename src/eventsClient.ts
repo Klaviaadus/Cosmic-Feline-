@@ -1,22 +1,23 @@
-import type { NormalizedEvent, TallinnEventsResult } from './lib/events';
+import type { NormalizedEvent, EventsResult } from './lib/events';
+import type { City } from './cities';
 
-export async function fetchTallinnEvents(keywords?: string[]): Promise<TallinnEventsResult> {
+export async function fetchEvents(city: City, keywords?: string[]): Promise<EventsResult> {
   const params = new URLSearchParams();
+  params.set('city', city.id);
   keywords?.forEach((keyword) => params.append('keyword', keyword));
-  const query = params.toString();
 
-  const res = await fetch(`/api/events${query ? `?${query}` : ''}`);
+  const res = await fetch(`/api/events?${params.toString()}`);
   if (!res.ok) throw new Error('Events unavailable');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  return data as TallinnEventsResult;
+  return data as EventsResult;
 }
 
-function formatWhen(startDate: string | null): string {
+function formatWhen(startDate: string | null, timezone: string): string {
   if (!startDate) return 'date TBA';
   const hasTime = startDate.includes('T');
   return new Date(startDate).toLocaleString('en-GB', {
-    timeZone: 'Europe/Tallinn',
+    timeZone: timezone,
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -37,13 +38,13 @@ function groupByCommunity(events: NormalizedEvent[]): Map<string, NormalizedEven
 const MAX_GROUPS = 6;
 const MAX_ONE_OFF = 5;
 
-export function formatEventsMessage({ meetup, eventbrite }: TallinnEventsResult): string {
+export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: City): string {
   if (meetup.length === 0 && eventbrite.length === 0) {
-    return "Couldn't find any upcoming events in Tallinn right now. Try again later! 😿";
+    return `Couldn't find any upcoming events in ${city.label} right now. Try again later! 😿`;
   }
 
   const lines: string[] = [
-    "Here's what's happening around Tallinn — real chances to meet people in person:",
+    `Here's what's happening around ${city.label} — real chances to meet people in person:`,
     '',
   ];
 
@@ -54,7 +55,7 @@ export function formatEventsMessage({ meetup, eventbrite }: TallinnEventsResult)
       .slice(0, MAX_GROUPS);
     for (const [group, events] of groups) {
       const next = events[0];
-      lines.push(`• ${group} — ${next.title} (${formatWhen(next.startDate)})`);
+      lines.push(`• ${group} — ${next.title} (${formatWhen(next.startDate, city.timezone)})`);
       lines.push(`  ${next.url}`);
     }
     lines.push('');
@@ -63,7 +64,7 @@ export function formatEventsMessage({ meetup, eventbrite }: TallinnEventsResult)
   if (eventbrite.length > 0) {
     lines.push('One-off events worth trying once:');
     for (const ev of eventbrite.slice(0, MAX_ONE_OFF)) {
-      lines.push(`• ${ev.title} — ${formatWhen(ev.startDate)}${ev.venue ? ` @ ${ev.venue}` : ''}`);
+      lines.push(`• ${ev.title} — ${formatWhen(ev.startDate, city.timezone)}${ev.venue ? ` @ ${ev.venue}` : ''}`);
       lines.push(`  ${ev.url}`);
     }
   }

@@ -1,5 +1,5 @@
-// Finds upcoming events in Tallinn from Meetup and Eventbrite's public search
-// pages, so Cosmic Cat can suggest real, recurring, in-person activities
+// Finds upcoming events in a given city from Meetup and Eventbrite's public
+// search pages, so the app can suggest real, recurring, in-person activities
 // instead of just chatting. Both sources embed JSON-LD <script> blocks in
 // their public search HTML - no API key needed, and neither site's
 // robots.txt disallows these search paths.
@@ -14,9 +14,14 @@ export interface NormalizedEvent {
   groupUrl: string | null;
 }
 
-export interface TallinnEventsResult {
+export interface EventsResult {
   meetup: NormalizedEvent[];
   eventbrite: NormalizedEvent[];
+}
+
+export interface EventsLocation {
+  meetupLocation: string; // e.g. "ee--Tallinn"
+  eventbriteRegion: string; // e.g. "estonia--tallinn"
 }
 
 export const DEFAULT_KEYWORDS = ['art', 'board games', 'hiking', 'book club', 'language exchange', 'music'];
@@ -93,9 +98,9 @@ export function parseEventbriteEvents(html: string): NormalizedEvent[] {
     }));
 }
 
-async function fetchMeetupEvents(keyword?: string): Promise<NormalizedEvent[]> {
+async function fetchMeetupEvents(location: string, keyword?: string): Promise<NormalizedEvent[]> {
   const url = new URL('https://www.meetup.com/find/');
-  url.searchParams.set('location', 'ee--Tallinn');
+  url.searchParams.set('location', location);
   url.searchParams.set('source', 'EVENTS');
   if (keyword) url.searchParams.set('keywords', keyword);
 
@@ -104,23 +109,29 @@ async function fetchMeetupEvents(keyword?: string): Promise<NormalizedEvent[]> {
   return parseMeetupEvents(await res.text());
 }
 
-async function fetchEventbriteEvents(keyword?: string): Promise<NormalizedEvent[]> {
+async function fetchEventbriteEvents(region: string, keyword?: string): Promise<NormalizedEvent[]> {
   const slug = keyword ? keyword.trim().toLowerCase().replace(/\s+/g, '-') : 'events';
-  const url = `https://www.eventbrite.com/d/estonia--tallinn/${encodeURIComponent(slug)}/`;
+  const url = `https://www.eventbrite.com/d/${region}/${encodeURIComponent(slug)}/`;
 
   const res = await fetch(url, { headers: { 'User-Agent': UA } });
   if (!res.ok) return [];
   return parseEventbriteEvents(await res.text());
 }
 
-export async function findTallinnEvents(keywords: string[] = DEFAULT_KEYWORDS): Promise<TallinnEventsResult> {
+export async function findEvents(
+  location: EventsLocation,
+  keywords: string[] = DEFAULT_KEYWORDS
+): Promise<EventsResult> {
   const searches = keywords.length ? keywords : [undefined];
   const meetupSeen = new Map<string, NormalizedEvent>();
   const eventbriteSeen = new Map<string, NormalizedEvent>();
 
   await Promise.all(
     searches.map(async (kw) => {
-      const [meetup, eventbrite] = await Promise.all([fetchMeetupEvents(kw), fetchEventbriteEvents(kw)]);
+      const [meetup, eventbrite] = await Promise.all([
+        fetchMeetupEvents(location.meetupLocation, kw),
+        fetchEventbriteEvents(location.eventbriteRegion, kw),
+      ]);
       for (const ev of meetup) meetupSeen.set(ev.url, ev);
       for (const ev of eventbrite) eventbriteSeen.set(ev.url, ev);
     })

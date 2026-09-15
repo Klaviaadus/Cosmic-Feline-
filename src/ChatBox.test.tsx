@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ChatBox } from './ChatBox';
+import { getCityById } from './cities';
+
+const tallinn = getCityById('tallinn');
 
 // Mock the openclaw module
 vi.mock('./openclaw', () => ({
   sendMessageToGuide: vi.fn(() => Promise.resolve('Mocked response')),
-  GREETING_MESSAGE: 'Hello! Find your people in Tallinn.',
+  getGreeting: vi.fn((city: { label: string }) => `Hello! Find your people in ${city.label}.`),
 }));
 
 // Mock rate limiting
@@ -17,7 +20,7 @@ vi.mock('./rateLimit', () => ({
 
 // Mock the events client
 vi.mock('./eventsClient', () => ({
-  fetchTallinnEvents: vi.fn(() => Promise.resolve({ meetup: [], eventbrite: [] })),
+  fetchEvents: vi.fn(() => Promise.resolve({ meetup: [], eventbrite: [] })),
   formatEventsMessage: vi.fn(() => 'Formatted events'),
 }));
 
@@ -28,17 +31,17 @@ describe('ChatBox Component', () => {
   });
 
   it('should render chat interface', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     expect(screen.getByPlaceholderText(/Ask about meeting people/i)).toBeInTheDocument();
   });
 
   it('should show greeting message on mount', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     expect(screen.getByText(/Hello! Find your people in Tallinn\./i)).toBeInTheDocument();
   });
 
   it('should display user input', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     const input = screen.getByPlaceholderText(/Ask about meeting people/i);
 
     fireEvent.change(input, { target: { value: 'Test message' } });
@@ -46,25 +49,25 @@ describe('ChatBox Component', () => {
   });
 
   it('should have send button', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     const sendButton = screen.getByLabelText(/Send message/i);
     expect(sendButton).toBeInTheDocument();
   });
 
   it('should have topic chips for finding events', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     expect(screen.getByText('Board games')).toBeInTheDocument();
     expect(screen.getByText('Surprise me')).toBeInTheDocument();
   });
 
   it('should disable send button when input is empty', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     const sendButton = screen.getByLabelText(/Send message/i);
     expect(sendButton).toBeDisabled();
   });
 
   it('should enable send button when input has text', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     const input = screen.getByPlaceholderText(/Ask about meeting people/i);
     const sendButton = screen.getByLabelText(/Send message/i);
 
@@ -73,7 +76,7 @@ describe('ChatBox Component', () => {
   });
 
   it('should show messages remaining counter', () => {
-    render(<ChatBox />);
+    render(<ChatBox city={tallinn} />);
     expect(screen.getByText(/20 messages left today/i)).toBeInTheDocument();
   });
 });

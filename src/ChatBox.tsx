@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Share2, Compass } from 'lucide-react';
-import { sendMessageToGuide, GREETING_MESSAGE, ChatMessage } from './openclaw';
+import { sendMessageToGuide, getGreeting, ChatMessage } from './openclaw';
 import { checkRateLimit, incrementRateLimit, getTimeUntilReset } from './rateLimit';
-import { fetchTallinnEvents, formatEventsMessage } from './eventsClient';
+import { fetchEvents, formatEventsMessage } from './eventsClient';
+import type { City } from './cities';
 
 const TOPIC_CHIPS = [
   { label: 'Board games', keyword: 'board games' },
@@ -14,7 +15,11 @@ const TOPIC_CHIPS = [
   { label: 'Surprise me', keyword: undefined },
 ];
 
-export function ChatBox() {
+interface ChatBoxProps {
+  city: City;
+}
+
+export function ChatBox({ city }: ChatBoxProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,11 +34,11 @@ export function ChatBox() {
     if (messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        content: GREETING_MESSAGE,
+        content: getGreeting(city),
         timestamp: Date.now()
       }]);
     }
-  }, [messages.length]);
+  }, [messages.length, city]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -61,7 +66,7 @@ export function ChatBox() {
     setIsLoading(true);
 
     try {
-      const response = await sendMessageToGuide(input, messages);
+      const response = await sendMessageToGuide(input, messages, city);
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: response,
@@ -93,10 +98,10 @@ export function ChatBox() {
     setIsLoading(true);
 
     try {
-      const result = await fetchTallinnEvents(keyword ? [keyword] : undefined);
+      const result = await fetchEvents(city, keyword ? [keyword] : undefined);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: formatEventsMessage(result),
+        content: formatEventsMessage(result, city),
         timestamp: Date.now()
       }]);
     } catch (error) {
@@ -119,7 +124,7 @@ export function ChatBox() {
   };
 
   const shareMessage = async (message: ChatMessage) => {
-    const text = `${message.role === 'user' ? 'Me' : 'Guide'}: ${message.content}\n\nFind your people in Tallinn: https://cosmic-feline.vercel.app`;
+    const text = `${message.role === 'user' ? 'Me' : 'Guide'}: ${message.content}\n\nFind your people in ${city.label}: https://cosmic-feline.vercel.app`;
 
     if (navigator.share) {
       try {
@@ -220,7 +225,7 @@ export function ChatBox() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about meeting people in Tallinn..."
+            placeholder={`Ask about meeting people in ${city.label}...`}
             className="flex-1 bg-white/10 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400 text-base md:text-lg"
             disabled={isLoading}
           />

@@ -1,4 +1,5 @@
-import { findTallinnEvents, DEFAULT_KEYWORDS } from '../src/lib/events';
+import { findEvents, DEFAULT_KEYWORDS } from '../src/lib/events';
+import { getCityById } from '../src/cities';
 
 export const config = {
   runtime: 'edge',
@@ -14,9 +15,10 @@ export default async function handler(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
+    const city = getCityById(searchParams.get('city'));
     const keywords = searchParams.getAll('keyword');
 
-    const result = await findTallinnEvents(keywords.length ? keywords : DEFAULT_KEYWORDS);
+    const result = await findEvents(city, keywords.length ? keywords : DEFAULT_KEYWORDS);
 
     return new Response(JSON.stringify(result), {
       status: 200,
