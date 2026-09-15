@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { findEvents, DEFAULT_KEYWORDS } from './src/lib/events';
 import { getCityById, type City } from './src/cities';
+import { logUsage, getUsageSummary } from './src/lib/usage';
 
 // Load .env.local
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
@@ -58,11 +59,20 @@ export default defineConfig({
                 { role: 'user', content: message },
               ];
 
+              const model = 'claude-haiku-4-5-20251001';
               const response = await anthropic.messages.create({
-                model: 'claude-haiku-4-5-20251001',
+                model,
                 max_tokens: 1024,
                 system: buildSystemPrompt(city),
                 messages,
+              });
+
+              await logUsage({
+                timestamp: Date.now(),
+                cityId: city.id,
+                model,
+                inputTokens: response.usage.input_tokens,
+                outputTokens: response.usage.output_tokens,
               });
 
               const text = response.content[0].type === 'text'
@@ -104,6 +114,40 @@ export default defineConfig({
             .catch((e) => {
               console.error('Events API error:', e);
               const message = e instanceof Error ? e.message : 'Events unavailable';
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: message }));
+            });
+        });
+      },
+    },
+    {
+      name: 'usage-api',
+      configureServer(server) {
+        server.middlewares.use('/api/usage', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Method not allowed' }));
+            return;
+          }
+          const url = new URL(req.url ?? '', 'http://localhost');
+          const key = url.searchParams.get('key');
+          if (!process.env.DASHBOARD_SECRET || key !== process.env.DASHBOARD_SECRET) {
+            res.statusCode = 401;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+          }
+
+          getUsageSummary()
+            .then((summary) => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(summary));
+            })
+            .catch((e) => {
+              console.error('Usage API error:', e);
+              const message = e instanceof Error ? e.message : 'Usage unavailable';
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ error: message }));

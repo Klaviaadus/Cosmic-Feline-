@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Usage Dashboard</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #7e22ce, #6d28d9, #1e40af);
+    min-height: 100vh;
+    color: white;
+    padding: 16px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 16px; }
+  .card {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; text-align: center; }
+  .stat .value { font-size: 1.6rem; font-weight: 700; }
+  .stat .label { font-size: 0.8rem; opacity: 0.7; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  th { opacity: 0.7; font-weight: 500; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 140px; margin-top: 8px; overflow-x: auto; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; min-width: 36px; flex-shrink: 0; }
+  .bar { width: 24px; background: linear-gradient(180deg, #c4b5fd, #7c3aed); border-radius: 4px 4px 0 0; }
+  .bar-label { font-size: 0.65rem; opacity: 0.7; margin-top: 4px; white-space: nowrap; }
+  input[type="password"], input[type="text"] {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;
+    border-radius: 8px; padding: 8px 12px; font-size: 1rem; width: 100%; max-width: 320px;
+  }
+  button {
+    background: white; color: #6d28d9; border: none; border-radius: 8px;
+    padding: 8px 16px; font-weight: 600; cursor: pointer; margin-left: 8px;
+  }
+  button:hover { opacity: 0.9; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .error { color: #fca5a5; }
+  .muted { opacity: 0.6; font-size: 0.85rem; }
+  code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 Usage Dashboard</h1>
+
+  <div id="gate" class="card">
+    <p class="muted">Enter the dashboard key to view token usage.</p>
+    <div class="row">
+      <input id="keyInput" type="password" placeholder="Dashboard key" />
+      <button id="unlockBtn">Unlock</button>
+    </div>
+    <p id="gateError" class="error muted" hidden></p>
+  </div>
+
+  <div id="content" hidden>
+    <div class="row" style="justify-content: space-between; margin-bottom: 12px;">
+      <span class="muted" id="lastUpdated"></span>
+      <div>
+        <button id="refreshBtn">Refresh</button>
+        <button id="lockBtn">Lock</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat"><div class="value" id="totalRequests">-</div><div class="label">Total requests</div></div>
+        <div class="stat"><div class="value" id="totalInput">-</div><div class="label">Input tokens</div></div>
+        <div class="stat"><div class="value" id="totalOutput">-</div><div class="label">Output tokens</div></div>
+        <div class="stat"><div class="value" id="totalTokens">-</div><div class="label">Total tokens</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <strong>Tokens per day</strong>
+      <div class="bars" id="dayBars"></div>
+    </div>
+
+    <div class="card">
+      <strong>By city</strong>
+      <table>
+        <thead><tr><th>City</th><th>Requests</th><th>Input tokens</th><th>Output tokens</th></tr></thead>
+        <tbody id="cityRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <strong>Recent activity</strong>
+      <table>
+        <thead><tr><th>Time</th><th>City</th><th>Input</th><th>Output</th></tr></thead>
+        <tbody id="eventRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'dashboard_key';
+  let refreshTimer = null;
+
+  const gate = document.getElementById('gate');
+  const content = document.getElementById('content');
+  const gateError = document.getElementById('gateError');
+
+  function fmt(n) { return (n ?? 0).toLocaleString(); }
+
+  async function loadSummary(key) {
+    const res = await fetch('/api/usage?key=' + encodeURIComponent(key));
+    if (res.status === 401) throw new Error('Wrong key');
+    if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+    return res.json();
+  }
+
+  function render(summary) {
+    document.getElementById('totalRequests').textContent = fmt(summary.total.requests);
+    document.getElementById('totalInput').textContent = fmt(summary.total.inputTokens);
+    document.getElementById('totalOutput').textContent = fmt(summary.total.outputTokens);
+    document.getElementById('totalTokens').textContent = fmt(summary.total.inputTokens + summary.total.outputTokens);
+
+    const dayBars = document.getElementById('dayBars');
+    dayBars.innerHTML = '';
+    const maxTokens = Math.max(1, ...summary.byDay.map(d => d.inputTokens + d.outputTokens));
+    for (const d of summary.byDay) {
+      const total = d.inputTokens + d.outputTokens;
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = Math.max(4, Math.round((total / maxTokens) * 120)) + 'px';
+      bar.title = d.day + ': ' + fmt(total) + ' tokens, ' + fmt(d.requests) + ' requests';
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = d.day.slice(5); // MM-DD
+      col.appendChild(bar);
+      col.appendChild(label);
+      dayBars.appendChild(col);
+    }
+    if (summary.byDay.length === 0) {
+      dayBars.innerHTML = '<span class="muted">No data yet.</span>';
+    }
+
+    const cityRows = document.getElementById('cityRows');
+    cityRows.innerHTML = summary.byCity.length
+      ? summary.byCity.map(c =>
+          '<tr><td>' + c.cityId + '</td><td>' + fmt(c.requests) + '</td><td>' + fmt(c.inputTokens) + '</td><td>' + fmt(c.outputTokens) + '</td></tr>'
+        ).join('')
+      : '<tr><td colspan="4" class="muted">No data yet.</td></tr>';
+
+    const eventRows = document.getElementById('eventRows');
+    eventRows.innerHTML = summary.recentEvents.length
+      ? summary.recentEvents.map(e =>
+          '<tr><td>' + new Date(e.timestamp).toLocaleString() + '</td><td>' + e.cityId + '</td><td>' + fmt(e.inputTokens) + '</td><td>' + fmt(e.outputTokens) + '</td></tr>'
+        ).join('')
+      : '<tr><td colspan="4" class="muted">No data yet.</td></tr>';
+
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  }
+
+  async function refresh() {
+    const key = localStorage.getItem(STORAGE_KEY);
+    if (!key) return;
+    try {
+      const summary = await loadSummary(key);
+      if (!summary.configured) {
+        content.innerHTML = '<div class="card error">No database configured yet - add UPSTASH_REDIS_REST_URL / TOKEN env vars.</div>';
+        return;
+      }
+      render(summary);
+    } catch (e) {
+      unlock(false, e.message);
+    }
+  }
+
+  function unlock(success, message) {
+    if (success) {
+      gate.hidden = true;
+      content.hidden = false;
+      refresh();
+      if (!refreshTimer) refreshTimer = setInterval(refresh, 30000);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      gate.hidden = false;
+      content.hidden = true;
+      gateError.hidden = !message;
+      gateError.textContent = message || '';
+      if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    }
+  }
+
+  document.getElementById('unlockBtn').addEventListener('click', async () => {
+    const key = document.getElementById('keyInput').value.trim();
+    if (!key) return;
+    try {
+      await loadSummary(key);
+      localStorage.setItem(STORAGE_KEY, key);
+      unlock(true);
+    } catch (e) {
+      unlock(false, e.message);
+    }
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', refresh);
+  document.getElementById('lockBtn').addEventListener('click', () => unlock(false));
+
+  // Try a stored key on load
+  (function init() {
+    const key = localStorage.getItem(STORAGE_KEY);
+    if (key) {
+      loadSummary(key).then(() => unlock(true)).catch((e) => unlock(false, e.message));
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getCityById, type City } from '../src/cities';
+import { logUsage } from '../src/lib/usage';
 
 export const config = {
   runtime: 'edge',
@@ -49,11 +50,20 @@ export default async function handler(req: Request) {
       { role: 'user', content: message },
     ];
 
+    const model = 'claude-haiku-4-5-20251001';
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model,
       max_tokens: 1024,
       system: buildSystemPrompt(city),
       messages,
+    });
+
+    await logUsage({
+      timestamp: Date.now(),
+      cityId: city.id,
+      model,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
     });
 
     const text = response.content[0].type === 'text'
