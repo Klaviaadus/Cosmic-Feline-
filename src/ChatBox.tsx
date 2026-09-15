@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Image as ImageIcon, Share2 } from 'lucide-react';
+import { Send, Image as ImageIcon, Share2, MapPin } from 'lucide-react';
 import { sendMessageToKlaw, getCatGreeting, ChatMessage } from './openclaw';
 import { checkRateLimit, incrementRateLimit, getTimeUntilReset } from './rateLimit';
+import { fetchTallinnEvents, formatEventsMessage } from './eventsClient';
 
 interface ChatBoxProps {
   catName: string;
@@ -75,6 +76,28 @@ export function ChatBox({ catName }: ChatBoxProps) {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: "Meow... something went wrong! 😿",
+        timestamp: Date.now()
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFindEvents = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      const result = await fetchTallinnEvents();
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: formatEventsMessage(result),
+        timestamp: Date.now()
+      }]);
+    } catch (error) {
+      console.error('Events error:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "Meow... couldn't fetch local events right now! 😿",
         timestamp: Date.now()
       }]);
     } finally {
@@ -235,6 +258,17 @@ export function ChatBox({ catName }: ChatBoxProps) {
             aria-label="Upload image"
           >
             <ImageIcon className="w-5 h-5" />
+          </button>
+
+          {/* Find local events button */}
+          <button
+            onClick={handleFindEvents}
+            disabled={isLoading}
+            className="flex-shrink-0 w-12 h-12 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-colors"
+            aria-label="Find local meetups in Tallinn"
+            title="Find local meetups in Tallinn"
+          >
+            <MapPin className="w-5 h-5" />
           </button>
 
           {/* Message input */}

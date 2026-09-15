@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import Anthropic from '@anthropic-ai/sdk';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
+import { findTallinnEvents, DEFAULT_KEYWORDS } from './src/lib/events';
 
 // Load .env.local
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
@@ -110,6 +111,34 @@ export default defineConfig({
               res.end(JSON.stringify({ error: message }));
             }
           });
+        });
+      },
+    },
+    {
+      name: 'events-api',
+      configureServer(server) {
+        server.middlewares.use('/api/events', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Method not allowed' }));
+            return;
+          }
+          const url = new URL(req.url ?? '', 'http://localhost');
+          const keywords = url.searchParams.getAll('keyword');
+
+          findTallinnEvents(keywords.length ? keywords : DEFAULT_KEYWORDS)
+            .then((result) => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(result));
+            })
+            .catch((e) => {
+              console.error('Events API error:', e);
+              const message = e instanceof Error ? e.message : 'Events unavailable';
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: message }));
+            });
         });
       },
     },
