@@ -1,4 +1,4 @@
-import { expect, afterEach, vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
@@ -16,20 +16,22 @@ const localStorageMock = {
   clear: () => { Object.keys(storage).forEach(key => delete storage[key]); },
 };
 
-global.localStorage = localStorageMock as any;
+global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock scrollIntoView for jsdom
 Element.prototype.scrollIntoView = vi.fn();
 
 // Mock FileReader for image upload tests
-global.FileReader = class {
+class MockFileReader {
   result: string | ArrayBuffer | null = null;
-  onloadend: ((this: FileReader, ev: ProgressEvent<FileReader>) => any) | null = null;
+  onloadend: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null;
 
   readAsDataURL() {
     this.result = 'data:image/png;base64,mockImageData';
     if (this.onloadend) {
-      this.onloadend({} as ProgressEvent<FileReader>);
+      this.onloadend.call(this as unknown as FileReader, {} as ProgressEvent<FileReader>);
     }
   }
-} as any;
+}
+
+global.FileReader = MockFileReader as unknown as typeof FileReader;

@@ -23,6 +23,12 @@ Your key traits:
 
 Keep responses concise (2-3 sentences usually) unless the user needs more detail. Be genuinely useful, not just a gimmick.`;
 
+interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  image?: string;
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/',
@@ -47,7 +53,7 @@ export default defineConfig({
               }
 
               const messages = [
-                ...history.map((msg: any) => {
+                ...history.map((msg: HistoryMessage) => {
                   if (msg.image) {
                     // Extract base64 data and media type
                     const match = msg.image.match(/^data:(.+);base64,(.+)$/);
@@ -66,7 +72,7 @@ export default defineConfig({
               ];
 
               // Build current message content
-              let currentContent: any;
+              let currentContent: string | Array<Record<string, unknown>>;
               if (image) {
                 const match = image.match(/^data:(.+);base64,(.+)$/);
                 if (match) {
@@ -96,11 +102,12 @@ export default defineConfig({
 
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ text }));
-            } catch (e: any) {
+            } catch (e) {
               console.error('Chat API error:', e);
+              const message = e instanceof Error ? e.message : 'Agent unavailable';
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: e.message || 'Agent unavailable' }));
+              res.end(JSON.stringify({ error: message }));
             }
           });
         });

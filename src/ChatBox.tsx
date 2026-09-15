@@ -119,7 +119,7 @@ export function ChatBox({ catName }: ChatBoxProps) {
     if (navigator.share) {
       try {
         await navigator.share({ text });
-      } catch (err) {
+      } catch {
         // User cancelled or share failed
         copyToClipboard(text);
       }

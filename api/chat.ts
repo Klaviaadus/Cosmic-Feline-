@@ -20,6 +20,12 @@ Your key traits:
 
 Keep responses concise (2-3 sentences usually) unless the user needs more detail. Be genuinely useful, not just a gimmick.`;
 
+interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  image?: string;
+}
+
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -40,7 +46,7 @@ export default async function handler(req: Request) {
 
     // Build messages array from history
     const messages = [
-      ...history.map((msg: any) => {
+      ...history.map((msg: HistoryMessage) => {
         if (msg.image) {
           // Extract base64 data and media type
           const match = msg.image.match(/^data:(.+);base64,(.+)$/);
@@ -59,7 +65,7 @@ export default async function handler(req: Request) {
     ];
 
     // Build current message content
-    let currentContent: any;
+    let currentContent: string | Array<Record<string, unknown>>;
     if (image) {
       const match = image.match(/^data:(.+);base64,(.+)$/);
       if (match) {
@@ -91,10 +97,11 @@ export default async function handler(req: Request) {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Chat API error:', error);
+    const message = error instanceof Error ? error.message : 'Agent unavailable';
     return new Response(
-      JSON.stringify({ error: error.message || 'Agent unavailable' }),
+      JSON.stringify({ error: message }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
