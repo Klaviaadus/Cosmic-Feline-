@@ -50,9 +50,17 @@ export async function logUsage(event: UsageEvent): Promise<void> {
     pipeline.sadd('usage:days', day);
 
     pipeline.zadd('usage:events', { score: event.timestamp, member: JSON.stringify(event) });
-    pipeline.zremrangebyrank('usage:events', 0, -(MAX_RECENT_EVENTS + 1));
 
     await pipeline.exec();
+
+    // Trim in a separate step using an explicit, non-negative rank range - a
+    // negative stop index here (e.g. 0, -201) clamps unpredictably when the
+    // set has far fewer than MAX_RECENT_EVENTS members and can wipe out the
+    // event we just added.
+    const count = await redis.zcard('usage:events');
+    if (count > MAX_RECENT_EVENTS) {
+      await redis.zremrangebyrank('usage:events', 0, count - MAX_RECENT_EVENTS - 1);
+    }
   } catch (error) {
     console.error('Failed to log usage:', error);
   }
