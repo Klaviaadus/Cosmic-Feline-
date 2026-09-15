@@ -8,22 +8,17 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const CAT_SYSTEM_PROMPT = `You are a cosmic AI cat assistant with personality. You're helpful, playful, and occasionally make cat references (meow, purr, etc) but you're not annoying about it.
+const GUIDE_SYSTEM_PROMPT = `You are a friendly local guide helping someone in Tallinn, Estonia find real, in-person ways to meet people, make friends, and possibly find a romantic partner - through recurring interest-based groups and events, not dating apps.
 
-Your key traits:
-- Helpful and actually useful for tasks
-- Witty and fun to talk to
-- Knowledgeable about many topics
-- Can help with reminders, quick research, answering questions
-- Has a distinct cat personality but doesn't overdo it
-- Uses cat puns occasionally but stays professional
+Stay strictly on topic: meeting people, socializing, local communities and events, conversation/small-talk practice, and encouragement around actually showing up. If asked about anything unrelated (coding help, homework, general trivia, unrelated tasks, etc.), politely decline and steer the conversation back to finding people or events in Tallinn.
 
-Keep responses concise (2-3 sentences usually) unless the user needs more detail. Be genuinely useful, not just a gimmick.`;
+Important: you do NOT have access to live event listings yourself. Never invent specific event names, dates, venues, or organizers. If the user wants concrete listings, tell them to tap one of the topic buttons above the message box, which pulls real, live data from Meetup and Eventbrite. You can still discuss what kinds of groups tend to exist, give advice on approaching a new group, or help someone rehearse what they'd say.
+
+Keep responses concise (2-4 sentences usually) and warm, not clinical.`;
 
 interface HistoryMessage {
   role: 'user' | 'assistant';
   content: string;
-  image?: string;
 }
 
 export default async function handler(req: Request) {
@@ -35,7 +30,7 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { message, history = [], image } = await req.json();
+    const { message, history = [] } = await req.json();
 
     if (!message || typeof message !== 'string') {
       return new Response(JSON.stringify({ error: 'Invalid message' }), {
@@ -44,54 +39,21 @@ export default async function handler(req: Request) {
       });
     }
 
-    // Build messages array from history
     const messages = [
-      ...history.map((msg: HistoryMessage) => {
-        if (msg.image) {
-          // Extract base64 data and media type
-          const match = msg.image.match(/^data:(.+);base64,(.+)$/);
-          if (match) {
-            return {
-              role: msg.role,
-              content: [
-                { type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } },
-                { type: 'text', text: msg.content }
-              ]
-            };
-          }
-        }
-        return { role: msg.role, content: msg.content };
-      }),
+      ...history.map((msg: HistoryMessage) => ({ role: msg.role, content: msg.content })),
+      { role: 'user', content: message },
     ];
-
-    // Build current message content
-    let currentContent: string | Array<Record<string, unknown>>;
-    if (image) {
-      const match = image.match(/^data:(.+);base64,(.+)$/);
-      if (match) {
-        currentContent = [
-          { type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } },
-          { type: 'text', text: message }
-        ];
-      } else {
-        currentContent = message;
-      }
-    } else {
-      currentContent = message;
-    }
-
-    messages.push({ role: 'user', content: currentContent });
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: CAT_SYSTEM_PROMPT,
+      system: GUIDE_SYSTEM_PROMPT,
       messages,
     });
 
     const text = response.content[0].type === 'text'
       ? response.content[0].text
-      : 'Meow... I got confused there!';
+      : "Sorry, I got confused there - could you rephrase?";
 
     return new Response(JSON.stringify({ text }), {
       status: 200,
@@ -99,7 +61,7 @@ export default async function handler(req: Request) {
     });
   } catch (error) {
     console.error('Chat API error:', error);
-    const message = error instanceof Error ? error.message : 'Agent unavailable';
+    const message = error instanceof Error ? error.message : 'Guide unavailable';
     return new Response(
       JSON.stringify({ error: message }),
       {

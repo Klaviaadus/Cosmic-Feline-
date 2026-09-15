@@ -1,20 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Image as ImageIcon, Share2, MapPin } from 'lucide-react';
-import { sendMessageToKlaw, getCatGreeting, ChatMessage } from './openclaw';
+import { Send, Share2, Compass } from 'lucide-react';
+import { sendMessageToGuide, GREETING_MESSAGE, ChatMessage } from './openclaw';
 import { checkRateLimit, incrementRateLimit, getTimeUntilReset } from './rateLimit';
 import { fetchTallinnEvents, formatEventsMessage } from './eventsClient';
 
-interface ChatBoxProps {
-  catName: string;
-}
+const TOPIC_CHIPS = [
+  { label: 'Board games', keyword: 'board games' },
+  { label: 'Language exchange', keyword: 'language exchange' },
+  { label: 'Hiking', keyword: 'hiking' },
+  { label: 'Book club', keyword: 'book club' },
+  { label: 'Art', keyword: 'art' },
+  { label: 'Music', keyword: 'music' },
+  { label: 'Surprise me', keyword: undefined },
+];
 
-export function ChatBox({ catName }: ChatBoxProps) {
+export function ChatBox() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimit, setRateLimit] = useState(checkRateLimit());
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,14 +27,13 @@ export function ChatBox({ catName }: ChatBoxProps) {
 
   useEffect(() => {
     if (messages.length === 0) {
-      const greeting = getCatGreeting(catName);
       setMessages([{
         role: 'assistant',
-        content: greeting,
+        content: GREETING_MESSAGE,
         timestamp: Date.now()
       }]);
     }
-  }, [catName, messages.length]);
+  }, [messages.length]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -51,18 +54,14 @@ export function ChatBox({ catName }: ChatBoxProps) {
       role: 'user',
       content: input,
       timestamp: Date.now(),
-      image: selectedImage || undefined
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    const imageToSend = selectedImage;
-    setSelectedImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
     setIsLoading(true);
 
     try {
-      const response = await sendMessageToKlaw(input, messages, imageToSend || undefined);
+      const response = await sendMessageToGuide(input, messages);
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: response,
@@ -75,7 +74,7 @@ export function ChatBox({ catName }: ChatBoxProps) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Meow... something went wrong! 😿",
+        content: "Hmm, something went wrong! 😿",
         timestamp: Date.now()
       }]);
     } finally {
@@ -83,11 +82,18 @@ export function ChatBox({ catName }: ChatBoxProps) {
     }
   };
 
-  const handleFindEvents = async () => {
+  const handleFindEvents = async (label: string, keyword?: string) => {
     if (isLoading) return;
+
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: `Find "${label}" events`,
+      timestamp: Date.now()
+    }]);
     setIsLoading(true);
+
     try {
-      const result = await fetchTallinnEvents();
+      const result = await fetchTallinnEvents(keyword ? [keyword] : undefined);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: formatEventsMessage(result),
@@ -97,7 +103,7 @@ export function ChatBox({ catName }: ChatBoxProps) {
       console.error('Events error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Meow... couldn't fetch local events right now! 😿",
+        content: "Couldn't fetch local events right now, try again in a bit! 😿",
         timestamp: Date.now()
       }]);
     } finally {
@@ -112,32 +118,8 @@ export function ChatBox({ catName }: ChatBoxProps) {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image too large! Max 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setSelectedImage(base64);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const clearImage = () => {
-    setSelectedImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   const shareMessage = async (message: ChatMessage) => {
-    const text = `${message.role === 'user' ? 'Me' : 'Cosmic Cat'}: ${message.content}\n\nChat with Cosmic Cat: https://cosmic-feline.vercel.app`;
+    const text = `${message.role === 'user' ? 'Me' : 'Guide'}: ${message.content}\n\nFind your people in Tallinn: https://cosmic-feline.vercel.app`;
 
     if (navigator.share) {
       try {
@@ -173,13 +155,6 @@ export function ChatBox({ catName }: ChatBoxProps) {
                     : 'bg-white/95 text-gray-800'
                 }`}
               >
-                {msg.image && (
-                  <img
-                    src={msg.image}
-                    alt="User uploaded"
-                    className="max-w-full max-h-64 rounded-lg mb-3 object-contain"
-                  />
-                )}
                 <p className="text-base md:text-lg leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <p className="text-xs opacity-60">
@@ -223,61 +198,29 @@ export function ChatBox({ catName }: ChatBoxProps) {
           </div>
         )}
 
-        {/* Image preview */}
-        {selectedImage && (
-          <div className="mb-3 relative inline-block">
-            <img
-              src={selectedImage}
-              alt="To upload"
-              className="max-w-[120px] max-h-[120px] rounded-lg border-2 border-purple-400"
-            />
+        {/* Topic chips */}
+        <div className="mb-3 flex flex-wrap gap-2">
+          {TOPIC_CHIPS.map((chip) => (
             <button
-              onClick={clearImage}
-              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600"
+              key={chip.label}
+              onClick={() => handleFindEvents(chip.label, chip.keyword)}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded-full transition-colors border border-white/10"
             >
-              ✕
+              <Compass className="w-3.5 h-3.5" />
+              {chip.label}
             </button>
-          </div>
-        )}
+          ))}
+        </div>
 
         <div className="flex gap-2 md:gap-3">
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-
-          {/* Image upload button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || !!selectedImage}
-            className="flex-shrink-0 w-12 h-12 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-colors"
-            aria-label="Upload image"
-          >
-            <ImageIcon className="w-5 h-5" />
-          </button>
-
-          {/* Find local events button */}
-          <button
-            onClick={handleFindEvents}
-            disabled={isLoading}
-            className="flex-shrink-0 w-12 h-12 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-colors"
-            aria-label="Find local meetups in Tallinn"
-            title="Find local meetups in Tallinn"
-          >
-            <MapPin className="w-5 h-5" />
-          </button>
-
           {/* Message input */}
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
+            placeholder="Ask about meeting people in Tallinn..."
             className="flex-1 bg-white/10 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400 text-base md:text-lg"
             disabled={isLoading}
           />

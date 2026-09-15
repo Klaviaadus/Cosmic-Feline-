@@ -4,8 +4,8 @@ import { ChatBox } from './ChatBox';
 
 // Mock the openclaw module
 vi.mock('./openclaw', () => ({
-  sendMessageToKlaw: vi.fn(() => Promise.resolve('Mocked response')),
-  getCatGreeting: vi.fn((name: string) => `Hello from ${name}!`),
+  sendMessageToGuide: vi.fn(() => Promise.resolve('Mocked response')),
+  GREETING_MESSAGE: 'Hello! Find your people in Tallinn.',
 }));
 
 // Mock rate limiting
@@ -15,6 +15,12 @@ vi.mock('./rateLimit', () => ({
   getTimeUntilReset: vi.fn(() => '12h 0m'),
 }));
 
+// Mock the events client
+vi.mock('./eventsClient', () => ({
+  fetchTallinnEvents: vi.fn(() => Promise.resolve({ meetup: [], eventbrite: [] })),
+  formatEventsMessage: vi.fn(() => 'Formatted events'),
+}));
+
 describe('ChatBox Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -22,44 +28,44 @@ describe('ChatBox Component', () => {
   });
 
   it('should render chat interface', () => {
-    render(<ChatBox catName="Cosmic" />);
-    expect(screen.getByPlaceholderText(/Type a message/i)).toBeInTheDocument();
+    render(<ChatBox />);
+    expect(screen.getByPlaceholderText(/Ask about meeting people/i)).toBeInTheDocument();
   });
 
   it('should show greeting message on mount', () => {
-    render(<ChatBox catName="Cosmic" />);
-    expect(screen.getByText(/Hello from Cosmic!/i)).toBeInTheDocument();
+    render(<ChatBox />);
+    expect(screen.getByText(/Hello! Find your people in Tallinn\./i)).toBeInTheDocument();
   });
 
   it('should display user input', () => {
-    render(<ChatBox catName="Cosmic" />);
-    const input = screen.getByPlaceholderText(/Type a message/i);
+    render(<ChatBox />);
+    const input = screen.getByPlaceholderText(/Ask about meeting people/i);
 
     fireEvent.change(input, { target: { value: 'Test message' } });
     expect(input).toHaveValue('Test message');
   });
 
   it('should have send button', () => {
-    render(<ChatBox catName="Cosmic" />);
+    render(<ChatBox />);
     const sendButton = screen.getByLabelText(/Send message/i);
     expect(sendButton).toBeInTheDocument();
   });
 
-  it('should have image upload button', () => {
-    render(<ChatBox catName="Cosmic" />);
-    const uploadButton = screen.getByLabelText(/Upload image/i);
-    expect(uploadButton).toBeInTheDocument();
+  it('should have topic chips for finding events', () => {
+    render(<ChatBox />);
+    expect(screen.getByText('Board games')).toBeInTheDocument();
+    expect(screen.getByText('Surprise me')).toBeInTheDocument();
   });
 
   it('should disable send button when input is empty', () => {
-    render(<ChatBox catName="Cosmic" />);
+    render(<ChatBox />);
     const sendButton = screen.getByLabelText(/Send message/i);
     expect(sendButton).toBeDisabled();
   });
 
   it('should enable send button when input has text', () => {
-    render(<ChatBox catName="Cosmic" />);
-    const input = screen.getByPlaceholderText(/Type a message/i);
+    render(<ChatBox />);
+    const input = screen.getByPlaceholderText(/Ask about meeting people/i);
     const sendButton = screen.getByLabelText(/Send message/i);
 
     fireEvent.change(input, { target: { value: 'Hello' } });
@@ -67,7 +73,7 @@ describe('ChatBox Component', () => {
   });
 
   it('should show messages remaining counter', () => {
-    render(<ChatBox catName="Cosmic" />);
+    render(<ChatBox />);
     expect(screen.getByText(/20 messages left today/i)).toBeInTheDocument();
   });
 });

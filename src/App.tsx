@@ -1,3 +1,4 @@
+import { Compass } from 'lucide-react';
 import { ChatBox } from './ChatBox';
 
 function App() {
@@ -7,15 +8,15 @@ function App() {
         {/* Header */}
         <div className="text-center py-8 px-4">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 flex items-center justify-center gap-3">
-            <span className="text-5xl">🐱</span>
-            Cosmic Cat
+            <Compass className="w-10 h-10 md:w-12 md:h-12" />
+            Tallinn Together
           </h1>
-          <p className="text-purple-200 text-lg">Your AI assistant with personality</p>
+          <p className="text-purple-200 text-lg">Real events. Real people. Right here in Tallinn.</p>
         </div>
 
         {/* Chat Interface */}
         <div className="flex-1 min-h-0">
-          <ChatBox catName="Cosmic Cat" />
+          <ChatBox />
         </div>
       </div>
     </div>

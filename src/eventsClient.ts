@@ -1,7 +1,11 @@
 import type { NormalizedEvent, TallinnEventsResult } from './lib/events';
 
-export async function fetchTallinnEvents(): Promise<TallinnEventsResult> {
-  const res = await fetch('/api/events');
+export async function fetchTallinnEvents(keywords?: string[]): Promise<TallinnEventsResult> {
+  const params = new URLSearchParams();
+  keywords?.forEach((keyword) => params.append('keyword', keyword));
+  const query = params.toString();
+
+  const res = await fetch(`/api/events${query ? `?${query}` : ''}`);
   if (!res.ok) throw new Error('Events unavailable');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
@@ -35,11 +39,11 @@ const MAX_ONE_OFF = 5;
 
 export function formatEventsMessage({ meetup, eventbrite }: TallinnEventsResult): string {
   if (meetup.length === 0 && eventbrite.length === 0) {
-    return "Meow... I couldn't find any upcoming events in Tallinn right now. Try again later! 😿";
+    return "Couldn't find any upcoming events in Tallinn right now. Try again later! 😿";
   }
 
   const lines: string[] = [
-    "🐾 Meow! Here's what's happening around Tallinn — real chances to meet people in person:",
+    "Here's what's happening around Tallinn — real chances to meet people in person:",
     '',
   ];
 
