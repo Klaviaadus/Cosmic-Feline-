@@ -146,21 +146,21 @@ export function ChatBox({ city }: ChatBoxProps) {
   return (
     <div className="h-full flex flex-col bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
         {messages.map((msg, idx) => (
           <div
             key={idx}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}
           >
-            <div className={`max-w-[85%] md:max-w-[75%] ${msg.role === 'user' ? 'order-2' : ''}`}>
+            <div className={`max-w-[90%] md:max-w-[75%] ${msg.role === 'user' ? 'order-2' : ''}`}>
               <div
-                className={`rounded-2xl p-4 shadow-lg ${
+                className={`rounded-2xl p-3 sm:p-4 shadow-lg ${
                   msg.role === 'user'
                     ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white'
                     : 'bg-white/95 text-gray-800'
                 }`}
               >
-                <p className="text-base md:text-lg leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                <p className="text-sm sm:text-base md:text-lg leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <p className="text-xs opacity-60">
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -194,23 +194,23 @@ export function ChatBox({ city }: ChatBoxProps) {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 md:p-6 bg-white/5 backdrop-blur-sm border-t border-white/10">
+      <div className="p-3 sm:p-4 md:p-6 bg-white/5 backdrop-blur-sm border-t border-white/10 flex-shrink-0">
         {/* Rate limit warning */}
         {rateLimit.remaining <= 5 && rateLimit.remaining > 0 && (
-          <div className="mb-3 text-yellow-300 text-sm flex items-center gap-2">
+          <div className="mb-2 text-yellow-300 text-sm flex items-center gap-2">
             <span>⚠️</span>
             <span>{rateLimit.remaining} messages left today</span>
           </div>
         )}
 
-        {/* Topic chips */}
-        <div className="mb-3 flex flex-wrap gap-2">
+        {/* Topic chips - single horizontally-scrollable row so it doesn't eat vertical space on mobile */}
+        <div className="mb-2 sm:mb-3 flex gap-2 overflow-x-auto flex-nowrap -mx-3 px-3 sm:mx-0 sm:px-0 [scrollbar-width:thin]">
           {TOPIC_CHIPS.map((chip) => (
             <button
               key={chip.label}
               onClick={() => handleFindEvents(chip.label, chip.keyword)}
               disabled={isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded-full transition-colors border border-white/10"
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm rounded-full transition-colors border border-white/10 whitespace-nowrap"
             >
               <Compass className="w-3.5 h-3.5" />
               {chip.label}

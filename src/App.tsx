@@ -27,23 +27,25 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl h-screen max-h-[900px] flex flex-col">
+    <div className="h-dvh bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-4xl h-full sm:h-screen sm:max-h-[900px] flex flex-col">
         {/* Header */}
-        <div className="text-center py-8 px-4">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 flex items-center justify-center gap-3">
-            <Compass className="w-10 h-10 md:w-12 md:h-12" />
+        <div className="text-center py-2 sm:py-6 px-4 flex-shrink-0">
+          <h1 className="text-xl sm:text-3xl md:text-5xl font-bold text-white mb-1 flex items-center justify-center gap-2">
+            <Compass className="w-5 h-5 sm:w-8 sm:h-8 md:w-12 md:h-12" />
             Find Your People
           </h1>
-          <p className="text-purple-200 text-lg mb-4">Real events. Real people. Right here in {city.label}.</p>
+          <p className="hidden sm:block text-purple-200 text-base md:text-lg mb-3">
+            Real events. Real people. Right here in {city.label}.
+          </p>
 
           {/* City picker */}
-          <div className="flex justify-center gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {CITIES.map((c) => (
               <button
                 key={c.id}
                 onClick={() => selectCity(c.id)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                className={`px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors border ${
                   c.id === city.id
                     ? 'bg-white text-purple-700 border-white'
                     : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
