@@ -49,7 +49,11 @@ export async function logUsage(event: UsageEvent): Promise<void> {
     pipeline.incrby(`usage:day:${day}:output_tokens`, event.outputTokens);
     pipeline.sadd('usage:days', day);
 
-    pipeline.zadd('usage:events', { score: event.timestamp, member: JSON.stringify(event) });
+    // @upstash/redis auto-serializes objects on write and auto-deserializes
+    // JSON-looking strings on read, so pass the object directly - manually
+    // JSON.stringify-ing here caused getUsageSummary's JSON.parse to choke
+    // on an already-parsed object and silently drop every event.
+    pipeline.zadd('usage:events', { score: event.timestamp, member: event });
 
     await pipeline.exec();
 
@@ -105,7 +109,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     redis.get<number>('usage:total:output_tokens'),
     redis.smembers('usage:cities'),
     redis.smembers('usage:days'),
-    redis.zrange<string[]>('usage:events', 0, MAX_RECENT_EVENTS, { rev: true }),
+    redis.zrange<UsageEvent[]>('usage:events', 0, MAX_RECENT_EVENTS, { rev: true }),
   ]);
 
   const byCity: CityUsage[] = await Promise.all(
@@ -132,15 +136,11 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     )
   ).sort((a, b) => a.day.localeCompare(b.day));
 
-  const recentEvents: UsageEvent[] = recentEventsRaw
-    .map((raw) => {
-      try {
-        return JSON.parse(raw) as UsageEvent;
-      } catch {
-        return null;
-      }
-    })
-    .filter((e): e is UsageEvent => e !== null);
+  // @upstash/redis already deserializes each member back into an object -
+  // just guard against unexpected/malformed entries rather than re-parsing.
+  const recentEvents: UsageEvent[] = recentEventsRaw.filter(
+    (e): e is UsageEvent => typeof e === 'object' && e !== null && typeof (e as UsageEvent).timestamp === 'number'
+  );
 
   return {
     configured: true,
