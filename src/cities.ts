@@ -27,6 +27,15 @@ export const CITIES: City[] = [
     meetupLocation: 'ge--Tbilisi',
     eventbriteRegion: 'georgia--tbilisi',
   },
+  {
+    id: 'riga',
+    label: 'Riga',
+    country: 'Latvia',
+    flag: '🇱🇻',
+    timezone: 'Europe/Riga',
+    meetupLocation: 'lv--Riga',
+    eventbriteRegion: 'latvia--riga',
+  },
 ];
 
 export const DEFAULT_CITY_ID = CITIES[0].id;
