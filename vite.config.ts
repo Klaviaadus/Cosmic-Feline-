@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { findEvents, DEFAULT_KEYWORDS } from './src/lib/events';
+import { findTelegramCommunities } from './src/lib/telegram';
 import { getCityById, type City } from './src/cities';
 import { logUsage, getUsageSummary } from './src/lib/usage';
 
@@ -106,10 +107,13 @@ export default defineConfig({
           const city = getCityById(url.searchParams.get('city'));
           const keywords = url.searchParams.getAll('keyword');
 
-          findEvents(city, keywords.length ? keywords : DEFAULT_KEYWORDS)
-            .then((result) => {
+          Promise.all([
+            findEvents(city, keywords.length ? keywords : DEFAULT_KEYWORDS),
+            keywords.length === 1 ? findTelegramCommunities(city.telegramSlug, keywords[0]) : Promise.resolve([]),
+          ])
+            .then(([result, communities]) => {
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(result));
+              res.end(JSON.stringify({ ...result, communities }));
             })
             .catch((e) => {
               console.error('Events API error:', e);

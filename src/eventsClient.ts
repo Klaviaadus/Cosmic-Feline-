@@ -1,7 +1,12 @@
 import type { NormalizedEvent, EventsResult } from './lib/events';
+import type { NormalizedCommunity } from './lib/telegram';
 import type { City } from './cities';
 
-export async function fetchEvents(city: City, keywords?: string[]): Promise<EventsResult> {
+export interface AppEventsResult extends EventsResult {
+  communities: NormalizedCommunity[];
+}
+
+export async function fetchEvents(city: City, keywords?: string[]): Promise<AppEventsResult> {
   const params = new URLSearchParams();
   params.set('city', city.id);
   keywords?.forEach((keyword) => params.append('keyword', keyword));
@@ -10,7 +15,7 @@ export async function fetchEvents(city: City, keywords?: string[]): Promise<Even
   if (!res.ok) throw new Error('Events unavailable');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  return data as EventsResult;
+  return data as AppEventsResult;
 }
 
 function formatWhen(startDate: string | null, timezone: string): string {
@@ -48,8 +53,12 @@ function matchesKeyword(event: NormalizedEvent, keywordLower: string): boolean {
 // same handful of groups. Boosting groups that actually mention the keyword
 // (when one was searched) surfaces genuine matches instead of just whichever
 // group happens to post the most events.
-export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: City, keyword?: string): string {
-  if (meetup.length === 0 && eventbrite.length === 0) {
+export function formatEventsMessage(
+  { meetup, eventbrite, communities }: AppEventsResult,
+  city: City,
+  keyword?: string
+): string {
+  if (meetup.length === 0 && eventbrite.length === 0 && communities.length === 0) {
     return `Couldn't find any upcoming events in ${city.label} right now. Try again later! 😿`;
   }
 
@@ -102,7 +111,16 @@ export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: 
       lines.push(`• ${ev.title} — ${formatWhen(ev.startDate, city.timezone)}${ev.venue ? ` @ ${ev.venue}` : ''}`);
       lines.push(`  ${ev.url}`);
     }
+    lines.push('');
   }
 
-  return lines.join('\n');
+  if (communities.length > 0) {
+    lines.push(`Telegram communities matching "${keyword}" you can join directly:`);
+    for (const c of communities) {
+      lines.push(`• ${c.name}${c.memberCount ? ` (${c.memberCount.toLocaleString()} members)` : ''}`);
+      lines.push(`  ${c.url}`);
+    }
+  }
+
+  return lines.join('\n').trimEnd();
 }

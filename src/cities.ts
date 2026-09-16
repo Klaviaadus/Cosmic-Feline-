@@ -6,6 +6,7 @@ export interface City {
   timezone: string;
   meetupLocation: string; // meetup.com's location query param, e.g. "ee--Tallinn"
   eventbriteRegion: string; // eventbrite.com's /d/<region>/ path segment, e.g. "estonia--tallinn"
+  telegramSlug: string; // telegram-groups.com's /<slug>-telegram-groups/ path segment
 }
 
 export const CITIES: City[] = [
@@ -17,6 +18,7 @@ export const CITIES: City[] = [
     timezone: 'Europe/Tallinn',
     meetupLocation: 'ee--Tallinn',
     eventbriteRegion: 'estonia--tallinn',
+    telegramSlug: 'tallinn',
   },
   {
     id: 'tbilisi',
@@ -26,6 +28,7 @@ export const CITIES: City[] = [
     timezone: 'Asia/Tbilisi',
     meetupLocation: 'ge--Tbilisi',
     eventbriteRegion: 'georgia--tbilisi',
+    telegramSlug: 'tbilisi',
   },
   {
     id: 'riga',
@@ -35,6 +38,7 @@ export const CITIES: City[] = [
     timezone: 'Europe/Riga',
     meetupLocation: 'lv--Riga',
     eventbriteRegion: 'latvia--riga',
+    telegramSlug: 'riga',
   },
 ];
 

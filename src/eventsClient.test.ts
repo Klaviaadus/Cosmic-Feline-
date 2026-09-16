@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatEventsMessage } from './eventsClient';
+import { formatEventsMessage, type AppEventsResult } from './eventsClient';
 import { getCityById } from './cities';
 import type { NormalizedEvent } from './lib/events';
+import type { NormalizedCommunity } from './lib/telegram';
 
 const tallinn = getCityById('tallinn');
 
@@ -18,9 +19,13 @@ function meetupEvent(overrides: Partial<NormalizedEvent>): NormalizedEvent {
   };
 }
 
+function result(overrides: Partial<AppEventsResult>): AppEventsResult {
+  return { meetup: [], eventbrite: [], communities: [], ...overrides };
+}
+
 describe('formatEventsMessage', () => {
-  it('reports no events found when both sources are empty', () => {
-    const message = formatEventsMessage({ meetup: [], eventbrite: [] }, tallinn);
+  it('reports no events found when every source is empty', () => {
+    const message = formatEventsMessage(result({}), tallinn);
     expect(message).toContain(`Couldn't find any upcoming events in ${tallinn.label}`);
   });
 
@@ -34,7 +39,7 @@ describe('formatEventsMessage', () => {
       meetupEvent({ group: 'Tbilisi Hikers', title: 'Weekend hiking trip', url: 'https://x/4' }),
     ];
 
-    const message = formatEventsMessage({ meetup: events, eventbrite: [] }, tallinn, 'hiking');
+    const message = formatEventsMessage(result({ meetup: events }), tallinn, 'hiking');
     const hikersIndex = message.indexOf('Tbilisi Hikers');
     const genericIndex = message.indexOf('Generic Social');
 
@@ -48,7 +53,7 @@ describe('formatEventsMessage', () => {
       meetupEvent({ group: 'Language Exchange Group', title: 'Weekly language cafe' }),
     ];
 
-    const message = formatEventsMessage({ meetup: events, eventbrite: [] }, tallinn, 'pottery');
+    const message = formatEventsMessage(result({ meetup: events }), tallinn, 'pottery');
 
     expect(message).toContain('No dedicated "pottery" groups found');
     expect(message).not.toContain('Recurring groups (worth showing up to more than once):');
@@ -57,9 +62,31 @@ describe('formatEventsMessage', () => {
   it('does not show a disclaimer when no keyword was searched (e.g. "Surprise me")', () => {
     const events = [meetupEvent({ group: 'Generic Social', title: 'Coffee meetup' })];
 
-    const message = formatEventsMessage({ meetup: events, eventbrite: [] }, tallinn);
+    const message = formatEventsMessage(result({ meetup: events }), tallinn);
 
     expect(message).toContain('Recurring groups (worth showing up to more than once):');
     expect(message).not.toContain('No dedicated');
+  });
+
+  it('lists Telegram communities with a join link and member count', () => {
+    const communities: NormalizedCommunity[] = [
+      { source: 'Telegram', name: 'Tallinn Hikers Club', url: 'https://t.me/tallinnhikers', memberCount: 512 },
+    ];
+
+    const message = formatEventsMessage(result({ communities }), tallinn, 'hiking');
+
+    expect(message).toContain('Telegram communities matching "hiking" you can join directly:');
+    expect(message).toContain('Tallinn Hikers Club (512 members)');
+    expect(message).toContain('https://t.me/tallinnhikers');
+  });
+
+  it('does not report "no events found" when only Telegram communities were found', () => {
+    const communities: NormalizedCommunity[] = [
+      { source: 'Telegram', name: 'Tallinn Hikers Club', url: 'https://t.me/tallinnhikers', memberCount: null },
+    ];
+
+    const message = formatEventsMessage(result({ communities }), tallinn, 'hiking');
+
+    expect(message).not.toContain("Couldn't find any upcoming events");
   });
 });

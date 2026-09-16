@@ -26,8 +26,9 @@ export interface EventsLocation {
 
 export const DEFAULT_KEYWORDS = ['art', 'board games', 'hiking', 'book club', 'language exchange', 'music'];
 
-const UA =
+export const SCRAPER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36';
+const UA = SCRAPER_UA;
 
 export function extractLdJson(html: string): unknown[] {
   const blocks: unknown[] = [];
