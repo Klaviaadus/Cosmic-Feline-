@@ -38,10 +38,22 @@ function groupByCommunity(events: NormalizedEvent[]): Map<string, NormalizedEven
 const MAX_GROUPS = 6;
 const MAX_ONE_OFF = 5;
 
-export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: City): string {
+function matchesKeyword(event: NormalizedEvent, keywordLower: string): boolean {
+  return (event.group ?? '').toLowerCase().includes(keywordLower) || event.title.toLowerCase().includes(keywordLower);
+}
+
+// Meetup's own keyword search is loose for smaller cities and often falls
+// back to generic, high-frequency "meet people" groups regardless of the
+// keyword searched - which made every topic chip look like it returned the
+// same handful of groups. Boosting groups that actually mention the keyword
+// (when one was searched) surfaces genuine matches instead of just whichever
+// group happens to post the most events.
+export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: City, keyword?: string): string {
   if (meetup.length === 0 && eventbrite.length === 0) {
     return `Couldn't find any upcoming events in ${city.label} right now. Try again later! 😿`;
   }
+
+  const keywordLower = keyword?.trim().toLowerCase();
 
   const lines: string[] = [
     `Here's what's happening around ${city.label} — real chances to meet people in person:`,
@@ -49,10 +61,26 @@ export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: 
   ];
 
   if (meetup.length > 0) {
-    lines.push('Recurring groups (worth showing up to more than once):');
-    const groups = [...groupByCommunity(meetup).entries()]
-      .sort((a, b) => b[1].length - a[1].length)
+    const groupEntries = [...groupByCommunity(meetup).entries()];
+    const anyGroupMatches = keywordLower ? groupEntries.some(([, events]) => events.some((e) => matchesKeyword(e, keywordLower))) : true;
+
+    if (keywordLower && !anyGroupMatches) {
+      lines.push(`No dedicated "${keyword}" groups found in ${city.label} right now — here are the most active general groups instead:`);
+    } else {
+      lines.push('Recurring groups (worth showing up to more than once):');
+    }
+
+    const groups = groupEntries
+      .sort((a, b) => {
+        if (keywordLower) {
+          const aMatches = a[1].some((e) => matchesKeyword(e, keywordLower));
+          const bMatches = b[1].some((e) => matchesKeyword(e, keywordLower));
+          if (aMatches !== bMatches) return aMatches ? -1 : 1;
+        }
+        return b[1].length - a[1].length;
+      })
       .slice(0, MAX_GROUPS);
+
     for (const [group, events] of groups) {
       const next = events[0];
       lines.push(`• ${group} — ${next.title} (${formatWhen(next.startDate, city.timezone)})`);
@@ -63,7 +91,14 @@ export function formatEventsMessage({ meetup, eventbrite }: EventsResult, city: 
 
   if (eventbrite.length > 0) {
     lines.push('One-off events worth trying once:');
-    for (const ev of eventbrite.slice(0, MAX_ONE_OFF)) {
+    const sortedEventbrite = keywordLower
+      ? [...eventbrite].sort((a, b) => {
+          const aMatches = matchesKeyword(a, keywordLower);
+          const bMatches = matchesKeyword(b, keywordLower);
+          return aMatches === bMatches ? 0 : aMatches ? -1 : 1;
+        })
+      : eventbrite;
+    for (const ev of sortedEventbrite.slice(0, MAX_ONE_OFF)) {
       lines.push(`• ${ev.title} — ${formatWhen(ev.startDate, city.timezone)}${ev.venue ? ` @ ${ev.venue}` : ''}`);
       lines.push(`  ${ev.url}`);
     }

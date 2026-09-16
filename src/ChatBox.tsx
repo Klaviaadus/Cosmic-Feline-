@@ -131,7 +131,7 @@ export function ChatBox({ city }: ChatBoxProps) {
       const result = await fetchEvents(city, keyword ? [keyword] : undefined);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: formatEventsMessage(result, city),
+        content: formatEventsMessage(result, city, keyword),
         timestamp: Date.now()
       }]);
     } catch (error) {
