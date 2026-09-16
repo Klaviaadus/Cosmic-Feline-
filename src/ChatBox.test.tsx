@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ChatBox } from './ChatBox';
 import { getCityById } from './cities';
+import { formatEventsMessage } from './eventsClient';
 
 const tallinn = getCityById('tallinn');
 
@@ -78,5 +79,19 @@ describe('ChatBox Component', () => {
   it('should show messages remaining counter', () => {
     render(<ChatBox city={tallinn} />);
     expect(screen.getByText(/20 messages left today/i)).toBeInTheDocument();
+  });
+
+  it('should render URLs in event results as clickable links', async () => {
+    vi.mocked(formatEventsMessage).mockReturnValueOnce(
+      'Board Games Night\nhttps://www.meetup.com/some-group/events/123/'
+    );
+    render(<ChatBox city={tallinn} />);
+
+    fireEvent.click(screen.getByText('Board games'));
+
+    const link = await screen.findByRole('link', { name: 'https://www.meetup.com/some-group/events/123/' });
+    expect(link).toHaveAttribute('href', 'https://www.meetup.com/some-group/events/123/');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

@@ -1,9 +1,39 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { Send, Share2, Compass } from 'lucide-react';
 import { sendMessageToGuide, getGreeting, ChatMessage } from './openclaw';
 import { checkRateLimit, incrementRateLimit, getTimeUntilReset } from './rateLimit';
 import { fetchEvents, formatEventsMessage } from './eventsClient';
 import type { City } from './cities';
+
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+function linkify(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+
+  URL_REGEX.lastIndex = 0;
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const url = match[0];
+    parts.push(
+      <a
+        key={key++}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline break-all hover:opacity-80"
+      >
+        {url}
+      </a>
+    );
+    lastIndex = match.index + url.length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+
+  return parts;
+}
 
 const TOPIC_CHIPS = [
   { label: 'Board games', keyword: 'board games' },
@@ -160,7 +190,7 @@ export function ChatBox({ city }: ChatBoxProps) {
                     : 'bg-white/95 text-gray-800'
                 }`}
               >
-                <p className="text-sm sm:text-base md:text-lg leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                <p className="text-sm sm:text-base md:text-lg leading-relaxed whitespace-pre-wrap">{linkify(msg.content)}</p>
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <p className="text-xs opacity-60">
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
