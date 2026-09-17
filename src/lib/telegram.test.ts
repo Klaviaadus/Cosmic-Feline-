@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { parseTelegramListing, findTelegramCommunities } from './telegram';
+import { parseTelegramListing, findTelegramCommunities, countTelegramGroups } from './telegram';
 
 const SAMPLE_CARD = (name: string, username: string, members: string) => `
   <div class="gc" onclick="location.href='/tallinn-telegram-groups/listing/abc123/'" role="listitem">
@@ -82,5 +82,32 @@ describe('findTelegramCommunities', () => {
 
     const results = await findTelegramCommunities('tbilisi', 'hiking');
     expect(results.map((r) => r.name)).toEqual(['Походы Тбилиси']);
+  });
+});
+
+describe('countTelegramGroups', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('counts every group on the page regardless of keyword', async () => {
+    const html = SAMPLE_CARD('Group One', 'groupone', '50') + SAMPLE_CARD('Group Two', 'grouptwo', '75');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => html }));
+
+    expect(await countTelegramGroups('tallinn')).toBe(2);
+  });
+
+  it('still excludes known false-positive cities (Riga/Novaya Riga)', async () => {
+    const html =
+      SAMPLE_CARD('Новая Рига Соседи Чат', 'novrigachat', '3000') +
+      SAMPLE_CARD('Рига Чат Латвия', 'rigachat', '400');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => html }));
+
+    expect(await countTelegramGroups('riga')).toBe(1);
+  });
+
+  it('returns 0 when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    expect(await countTelegramGroups('tallinn')).toBe(0);
   });
 });
