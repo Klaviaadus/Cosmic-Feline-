@@ -1,9 +1,20 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { Send, Share2, Compass } from 'lucide-react';
-import { sendMessageToGuide, getGreeting, ChatMessage } from './openclaw';
-import { checkRateLimit, incrementRateLimit, getTimeUntilReset } from './rateLimit';
-import { fetchEvents, formatEventsMessage } from './eventsClient';
-import type { City } from './cities';
+import { useState, useEffect, useRef, type ReactNode } from "react";
+import {
+  ArrowUp,
+  ArrowUpRight,
+  Share2,
+  Sparkles,
+  MessageCircle,
+  Shuffle,
+} from "lucide-react";
+import { sendMessageToGuide, getGreeting, ChatMessage } from "./openclaw";
+import {
+  checkRateLimit,
+  incrementRateLimit,
+  getTimeUntilReset,
+} from "./rateLimit";
+import { fetchEvents, formatEventsMessage } from "./eventsClient";
+import type { City } from "./cities";
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
@@ -26,7 +37,7 @@ function linkify(text: string): ReactNode[] {
         className="underline break-all hover:opacity-80"
       >
         {url}
-      </a>
+      </a>,
     );
     lastIndex = match.index + url.length;
   }
@@ -36,13 +47,13 @@ function linkify(text: string): ReactNode[] {
 }
 
 const TOPIC_CHIPS = [
-  { label: 'Board games', keyword: 'board games' },
-  { label: 'Language exchange', keyword: 'language exchange' },
-  { label: 'Hiking', keyword: 'hiking' },
-  { label: 'Book club', keyword: 'book club' },
-  { label: 'Art', keyword: 'art' },
-  { label: 'Music', keyword: 'music' },
-  { label: 'Surprise me', keyword: undefined },
+  { label: "Board games", keyword: "board games" },
+  { label: "Language exchange", keyword: "language exchange" },
+  { label: "Hiking", keyword: "hiking" },
+  { label: "Book club", keyword: "book club" },
+  { label: "Art", keyword: "art" },
+  { label: "Music", keyword: "music" },
+  { label: "Surprise me", keyword: undefined },
 ];
 
 interface ChatBoxProps {
@@ -51,22 +62,25 @@ interface ChatBoxProps {
 
 export function ChatBox({ city }: ChatBoxProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimit, setRateLimit] = useState(checkRateLimit());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesEndRef.current?.parentElement;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
     if (messages.length === 0) {
-      setMessages([{
-        role: 'assistant',
-        content: getGreeting(city),
-        timestamp: Date.now()
-      }]);
+      setMessages([
+        {
+          role: "assistant",
+          content: getGreeting(city),
+          timestamp: Date.now(),
+        },
+      ]);
     }
   }, [messages.length, city]);
 
@@ -77,41 +91,47 @@ export function ChatBox({ city }: ChatBoxProps) {
     setRateLimit(limitCheck);
 
     if (!limitCheck.allowed) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `You've reached your daily limit of 20 messages! 😿\n\nReset in ${getTimeUntilReset(limitCheck.resetTime)}.\n\nUpgrade coming soon for unlimited chats! 🌟`,
-        timestamp: Date.now()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `You've reached your daily limit of 20 messages! 😿\n\nReset in ${getTimeUntilReset(limitCheck.resetTime)}.\n\nUpgrade coming soon for unlimited chats! 🌟`,
+          timestamp: Date.now(),
+        },
+      ]);
       return;
     }
 
     const userMessage: ChatMessage = {
-      role: 'user',
+      role: "user",
       content: input,
       timestamp: Date.now(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setIsLoading(true);
 
     try {
       const response = await sendMessageToGuide(input, messages, city);
       const assistantMessage: ChatMessage = {
-        role: 'assistant',
+        role: "assistant",
         content: response,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
       incrementRateLimit();
       setRateLimit(checkRateLimit());
     } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Hmm, something went wrong! 😿",
-        timestamp: Date.now()
-      }]);
+      console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Hmm, something went wrong! 😿",
+          timestamp: Date.now(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -119,42 +139,55 @@ export function ChatBox({ city }: ChatBoxProps) {
 
   const handleFindEvents = async (label: string, keyword?: string) => {
     if (isLoading) return;
+    document
+      .getElementById("guide")
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
-    setMessages(prev => [...prev, {
-      role: 'user',
-      content: `Find "${label}" events`,
-      timestamp: Date.now()
-    }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: `Find "${label}" events`,
+        timestamp: Date.now(),
+      },
+    ]);
     setIsLoading(true);
 
     try {
       const result = await fetchEvents(city, keyword ? [keyword] : undefined);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: formatEventsMessage(result, city, keyword),
-        timestamp: Date.now()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: formatEventsMessage(result, city, keyword),
+          timestamp: Date.now(),
+        },
+      ]);
     } catch (error) {
-      console.error('Events error:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Couldn't fetch local events right now, try again in a bit! 😿",
-        timestamp: Date.now()
-      }]);
+      console.error("Events error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Couldn't fetch local events right now, try again in a bit! 😿",
+          timestamp: Date.now(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
   const shareMessage = async (message: ChatMessage) => {
-    const text = `${message.role === 'user' ? 'Me' : 'Guide'}: ${message.content}\n\nFind your people in ${city.label}: https://cosmic-feline.vercel.app`;
+    const text = `${message.role === "user" ? "Me" : "Guide"}: ${message.content}\n\nFind your people in ${city.label}: https://cosmic-feline.vercel.app`;
 
     if (navigator.share) {
       try {
@@ -170,114 +203,228 @@ export function ChatBox({ city }: ChatBoxProps) {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    alert("Copied to clipboard!");
   };
 
   return (
-    <div className="h-full flex flex-col bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-      {/* Messages */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}
-          >
-            <div className={`max-w-[90%] md:max-w-[75%] ${msg.role === 'user' ? 'order-2' : ''}`}>
-              <div
-                className={`rounded-2xl p-3 sm:p-4 shadow-lg ${
-                  msg.role === 'user'
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white'
-                    : 'bg-white/95 text-gray-800'
-                }`}
-              >
-                <p className="text-sm sm:text-base md:text-lg leading-relaxed whitespace-pre-wrap">{linkify(msg.content)}</p>
-                <div className="flex items-center justify-between mt-2 gap-2">
-                  <p className="text-xs opacity-60">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  {msg.role === 'assistant' && (
+    <div className="discovery-layout">
+      <section className="discovery" id="discover">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">FOLLOW YOUR CURIOSITY</div>
+            <h2>What's your thing?</h2>
+          </div>
+          <span className="section-note">Find a reason to get out.</span>
+        </div>
+        <div className="interest-grid">
+          {TOPIC_CHIPS.filter((chip) => chip.keyword).map((chip, index) => (
+            <button
+              key={chip.label}
+              className={`interest-card interest-${index}`}
+              onClick={() => handleFindEvents(chip.label, chip.keyword)}
+              disabled={isLoading}
+            >
+              <div className="interest-art" aria-hidden="true">
+                {index === 0 && (
+                  <>
+                    <span className="dice dice-one">⚄</span>
+                    <span className="dice dice-two">⚂</span>
+                    <span className="art-mini-star">✦</span>
+                  </>
+                )}
+                {index === 1 && (
+                  <>
+                    <span className="speech speech-one">hello!</span>
+                    <span className="speech speech-two">გამარჯობა</span>
+                  </>
+                )}
+                {index === 2 && (
+                  <>
+                    <span className="sun" />
+                    <span className="mountain mountain-back" />
+                    <span className="mountain mountain-front" />
+                    <span className="trail" />
+                  </>
+                )}
+                {index === 3 && (
+                  <>
+                    <span className="book book-one">
+                      ONE MORE
+                      <br />
+                      CHAPTER
+                    </span>
+                    <span className="book book-two" />
+                    <span className="art-mini-star">✧</span>
+                  </>
+                )}
+                {index === 4 && (
+                  <>
+                    <span className="art-blob" />
+                    <span className="art-circle" />
+                    <span className="art-squiggle">〰</span>
+                  </>
+                )}
+                {index === 5 && (
+                  <>
+                    <span className="record">
+                      <i />
+                    </span>
+                    <span className="music-note">♪</span>
+                  </>
+                )}
+              </div>
+              <div className="interest-label">
+                <span>{chip.label}</span>
+                <ArrowUpRight size={17} />
+              </div>
+              <span className="interest-description">
+                {
+                  [
+                    "Good games, better company",
+                    "New words, new worlds",
+                    "Take the scenic route",
+                    "Get on the same page",
+                    "Make something together",
+                    "Find your kind of rhythm",
+                  ][index]
+                }
+              </span>
+            </button>
+          ))}
+        </div>
+        <button
+          className="surprise-button"
+          onClick={() => handleFindEvents("Surprise me")}
+          disabled={isLoading}
+        >
+          <Shuffle size={17} />
+          <span>
+            Open to anything? <strong>Surprise me</strong>
+          </span>
+          <ArrowUpRight size={17} />
+        </button>
+        <div className="discovery-note">
+          <span>✳</span>
+          <p>
+            You don't need to be interesting.
+            <br />
+            <strong>Just interested.</strong>
+          </p>
+        </div>
+      </section>
+      <section className="guide" id="guide" aria-label="Your local guide">
+        <header className="guide-header">
+          <div className="guide-avatar">
+            <Sparkles size={23} />
+          </div>
+          <div>
+            <h2>A little nudge</h2>
+            <p>
+              <span className="status-dot" /> Your {city.label} guide
+            </p>
+          </div>
+          <span className="ai-badge">AI GUIDE</span>
+        </header>
+        <div
+          className="messages"
+          role="log"
+          aria-label="Conversation"
+          aria-live="polite"
+          aria-busy={isLoading}
+        >
+          <div className="conversation-date">
+            GOOD CONNECTIONS START WITH A HELLO
+          </div>
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`message message-${msg.role}`}>
+              {msg.role === "assistant" && (
+                <span className="message-avatar">✳</span>
+              )}
+              <div className="message-content">
+                <div className="message-bubble">{linkify(msg.content)}</div>
+                <div className="message-meta">
+                  <span>
+                    {msg.role === "assistant" ? "Your guide" : "You"} ·{" "}
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {msg.role === "assistant" && (
                     <button
                       onClick={() => shareMessage(msg)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-black/10 rounded"
                       aria-label="Share message"
                     >
-                      <Share2 className="w-4 h-4" />
+                      <Share2 size={12} />
                     </button>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white/95 text-gray-800 rounded-2xl p-4 shadow-lg">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></span>
-                <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="p-3 sm:p-4 md:p-6 bg-white/5 backdrop-blur-sm border-t border-white/10 flex-shrink-0">
-        {/* Rate limit warning */}
-        {rateLimit.remaining <= 5 && rateLimit.remaining > 0 && (
-          <div className="mb-2 text-yellow-300 text-sm flex items-center gap-2">
-            <span>⚠️</span>
-            <span>{rateLimit.remaining} messages left today</span>
-          </div>
-        )}
-
-        {/* Topic chips - single horizontally-scrollable row so it doesn't eat vertical space on mobile */}
-        <div className="mb-2 sm:mb-3 flex gap-2 overflow-x-auto flex-nowrap -mx-3 px-3 sm:mx-0 sm:px-0 [scrollbar-width:thin]">
-          {TOPIC_CHIPS.map((chip) => (
-            <button
-              key={chip.label}
-              onClick={() => handleFindEvents(chip.label, chip.keyword)}
-              disabled={isLoading}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm rounded-full transition-colors border border-white/10 whitespace-nowrap"
-            >
-              <Compass className="w-3.5 h-3.5" />
-              {chip.label}
-            </button>
           ))}
+          {isLoading && (
+            <div className="loading-message" role="status">
+              <span />
+              <span />
+              <span />
+              <span className="sr-only">Finding a little inspiration…</span>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-
-        <div className="flex gap-2 md:gap-3">
-          {/* Message input */}
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={`Ask about meeting people in ${city.label}...`}
-            className="flex-1 bg-white/10 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400 text-base md:text-lg"
-            disabled={isLoading}
-          />
-
-          {/* Send button */}
-          <button
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-            className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl disabled:hover:shadow-lg"
-            aria-label="Send message"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Messages remaining counter */}
-        {rateLimit.remaining > 0 && (
-          <div className="mt-3 text-center text-white/60 text-sm">
-            {rateLimit.remaining} messages left today
+        {messages.length <= 1 && (
+          <div className="guide-suggestion">
+            <MessageCircle size={16} />
+            <span>
+              New in town? Going solo?
+              <br />
+              Start here. We'll figure it out together.
+            </span>
           </div>
         )}
-      </div>
+        <div className="composer-area">
+          {rateLimit.remaining <= 5 && (
+            <p className="limit-warning">
+              {rateLimit.remaining > 0
+                ? `${rateLimit.remaining} messages left today`
+                : `Daily message limit reached. Reset in ${getTimeUntilReset(rateLimit.resetTime)}.`}
+            </p>
+          )}
+          <form
+            className="composer"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+          >
+            <label className="sr-only" htmlFor="guide-message">
+              Message your local guide
+            </label>
+            <input
+              id="guide-message"
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={`Ask about meeting people in ${city.label}...`}
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              aria-label="Send message"
+            >
+              <ArrowUp size={20} />
+            </button>
+          </form>
+          <div className="composer-footer">
+            <span>Small steps. Real connections.</span>
+            {rateLimit.remaining > 5 && (
+              <span>{rateLimit.remaining} messages left today</span>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
