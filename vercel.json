@@ -10,6 +10,12 @@
       "destination": "/api/:path*"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/health-check",
+      "schedule": "0 8 * * *"
+    }
+  ],
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",

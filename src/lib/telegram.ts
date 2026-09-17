@@ -80,18 +80,21 @@ export function parseTelegramListing(html: string): NormalizedCommunity[] {
   return results;
 }
 
-export async function findTelegramCommunities(citySlug: string, keyword: string): Promise<NormalizedCommunity[]> {
+async function fetchCityGroups(citySlug: string): Promise<NormalizedCommunity[]> {
   const res = await fetch(`https://www.telegram-groups.com/${citySlug}-telegram-groups/`, {
     headers: { 'User-Agent': SCRAPER_UA },
   });
   if (!res.ok) return [];
 
-  let groups = parseTelegramListing(await res.text());
+  const groups = parseTelegramListing(await res.text());
 
   const excludeTerms = EXCLUDE_TERMS[citySlug] ?? [];
-  if (excludeTerms.length) {
-    groups = groups.filter((g) => !excludeTerms.some((term) => g.name.toLowerCase().includes(term)));
-  }
+  if (!excludeTerms.length) return groups;
+  return groups.filter((g) => !excludeTerms.some((term) => g.name.toLowerCase().includes(term)));
+}
+
+export async function findTelegramCommunities(citySlug: string, keyword: string): Promise<NormalizedCommunity[]> {
+  const groups = await fetchCityGroups(citySlug);
 
   const terms = matchTerms(keyword.toLowerCase());
   const matching = groups.filter((g) => {
@@ -100,4 +103,12 @@ export async function findTelegramCommunities(citySlug: string, keyword: string)
   });
 
   return matching.sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0)).slice(0, MAX_COMMUNITIES);
+}
+
+// Unfiltered group count for a city's directory page, used by the health
+// check cron - independent of any keyword match, so a zero here means the
+// page itself is unreachable or unparseable, not just a quiet week for one
+// topic.
+export async function countTelegramGroups(citySlug: string): Promise<number> {
+  return (await fetchCityGroups(citySlug)).length;
 }
