@@ -40,6 +40,26 @@ export const CITIES: City[] = [
     eventbriteRegion: 'latvia--riga',
     telegramSlug: 'riga',
   },
+  {
+    id: 'london',
+    label: 'London',
+    country: 'United Kingdom',
+    flag: '🇬🇧',
+    timezone: 'Europe/London',
+    meetupLocation: 'gb--London',
+    eventbriteRegion: 'united-kingdom--london',
+    telegramSlug: 'london',
+  },
+  {
+    id: 'berlin',
+    label: 'Berlin',
+    country: 'Germany',
+    flag: '🇩🇪',
+    timezone: 'Europe/Berlin',
+    meetupLocation: 'de--Berlin',
+    eventbriteRegion: 'germany--berlin',
+    telegramSlug: 'berlin',
+  },
 ];
 
 export const DEFAULT_CITY_ID = CITIES[0].id;
