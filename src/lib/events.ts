@@ -99,13 +99,25 @@ export function parseEventbriteEvents(html: string): NormalizedEvent[] {
     }));
 }
 
+// A hung fetch to either source (throttling, blocking, whatever) would
+// otherwise run past the edge function's own execution limit and take the
+// whole /api/events response down with it, including a source that answered
+// fine - see the same guard on the Telegram fetch in lib/telegram.ts, where
+// this was observed happening in production.
+const FETCH_TIMEOUT_MS = 8000;
+
 async function fetchMeetupEvents(location: string, keyword?: string): Promise<NormalizedEvent[]> {
   const url = new URL('https://www.meetup.com/find/');
   url.searchParams.set('location', location);
   url.searchParams.set('source', 'EVENTS');
   if (keyword) url.searchParams.set('keywords', keyword);
 
-  const res = await fetch(url, { headers: { 'User-Agent': UA } });
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  } catch {
+    return [];
+  }
   if (!res.ok) return [];
   return parseMeetupEvents(await res.text());
 }
@@ -114,7 +126,12 @@ async function fetchEventbriteEvents(region: string, keyword?: string): Promise<
   const slug = keyword ? keyword.trim().toLowerCase().replace(/\s+/g, '-') : 'events';
   const url = `https://www.eventbrite.com/d/${region}/${encodeURIComponent(slug)}/`;
 
-  const res = await fetch(url, { headers: { 'User-Agent': UA } });
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  } catch {
+    return [];
+  }
   if (!res.ok) return [];
   return parseEventbriteEvents(await res.text());
 }

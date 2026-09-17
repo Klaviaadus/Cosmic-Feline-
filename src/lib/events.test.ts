@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { extractLdJson, parseMeetupEvents, parseEventbriteEvents } from './events';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { extractLdJson, parseMeetupEvents, parseEventbriteEvents, findEvents } from './events';
 
 describe('extractLdJson', () => {
   it('parses valid JSON-LD script blocks', () => {
@@ -53,5 +53,26 @@ describe('parseEventbriteEvents', () => {
         groupUrl: null,
       },
     ]);
+  });
+});
+
+describe('findEvents', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Regression test: a hung fetch to either source used to run past the
+  // edge function's own execution limit and take down the whole
+  // /api/events response - see the matching guard in lib/telegram.ts, where
+  // this was observed happening in production. The timeout guard rejects
+  // fetch's promise the same way a network failure does.
+  it('returns empty results instead of throwing when a source fetch is aborted (timeout)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('The operation was aborted')));
+
+    const result = await findEvents({ meetupLocation: 'ee--Tallinn', eventbriteRegion: 'estonia--tallinn' }, [
+      'hiking',
+    ]);
+
+    expect(result).toEqual({ meetup: [], eventbrite: [] });
   });
 });

@@ -76,6 +76,18 @@ describe('findTelegramCommunities', () => {
     expect(results).toEqual([]);
   });
 
+  // Regression test for a real production incident: telegram-groups.com
+  // hung instead of erroring, and without a timeout guard that hang ran past
+  // the edge function's own execution limit, taking down the whole
+  // /api/events response (including Meetup/Eventbrite results that were
+  // otherwise fine). The timeout itself rejects fetch's promise the same way
+  // a network failure does, so this exercises the same catch path.
+  it('returns an empty array instead of throwing when the fetch is aborted (timeout)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('The operation was aborted')));
+    const results = await findTelegramCommunities('tallinn', 'hiking');
+    expect(results).toEqual([]);
+  });
+
   it('matches a Russian-named group via the English keyword "hiking" through the synonym list', async () => {
     const html = SAMPLE_CARD('Походы Тбилиси', 'tbilisihikes', '899');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => html }));

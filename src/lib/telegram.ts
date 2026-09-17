@@ -80,10 +80,23 @@ export function parseTelegramListing(html: string): NormalizedCommunity[] {
   return results;
 }
 
+// telegram-groups.com occasionally hangs indefinitely instead of erroring
+// (likely throttling/blocking the request) rather than responding with a
+// clean error - without a timeout, that hang runs past the edge function's
+// own execution limit and takes the whole /api/events response down with it,
+// including the otherwise-fine Meetup/Eventbrite results. Fail fast instead.
+const FETCH_TIMEOUT_MS = 8000;
+
 async function fetchCityGroups(citySlug: string): Promise<NormalizedCommunity[]> {
-  const res = await fetch(`https://www.telegram-groups.com/${citySlug}-telegram-groups/`, {
-    headers: { 'User-Agent': SCRAPER_UA },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`https://www.telegram-groups.com/${citySlug}-telegram-groups/`, {
+      headers: { 'User-Agent': SCRAPER_UA },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch {
+    return [];
+  }
   if (!res.ok) return [];
 
   const groups = parseTelegramListing(await res.text());
