@@ -187,7 +187,7 @@ export function ChatBox({ city }: ChatBoxProps) {
   };
 
   const shareMessage = async (message: ChatMessage) => {
-    const text = `${message.role === "user" ? "Me" : "Guide"}: ${message.content}\n\nFind your people in ${city.label}: https://cosmic-feline.vercel.app`;
+    const text = `${message.role === "user" ? "Me" : "Guide"}: ${message.content}\n\nFind your people in ${city.label}: https://folnu.com`;
 
     if (navigator.share) {
       try {
